@@ -1,21 +1,30 @@
 /**
- * Claude Token Counter — Local Proxy Server
+ * Claude Token Counter — Server
  *
- * This lightweight Express server proxies requests from the React frontend
- * to the Anthropic API, bypassing browser CORS restrictions.
+ * Serves the token counter app and proxies requests to the Anthropic API.
  *
  * Usage:
  *   npm install express
  *   node server.js
  *
+ * Then open http://localhost:3456 in your browser.
  * The server runs on port 3456 by default (set PORT env var to change).
  */
 
 const express = require("express");
+const path = require("path");
 const https = require("https");
 
 const app = express();
 const PORT = process.env.PORT || 3456;
+
+// Serve static files (token-counter.html, etc.) from the same directory
+app.use(express.static(path.join(__dirname)));
+
+// Redirect root to the app
+app.get("/", (req, res) => {
+  res.sendFile(path.join(__dirname, "token-counter.html"));
+});
 
 app.use(express.json({ limit: "2mb" }));
 
@@ -97,8 +106,9 @@ app.post("/count-tokens", (req, res) => {
 });
 
 app.listen(PORT, () => {
-  console.log(`\n  Claude Token Counter proxy server running`);
-  console.log(`  http://localhost:${PORT}\n`);
+  console.log(`\n  Claude Token Counter is running!`);
+  console.log(`  Open http://localhost:${PORT} in your browser.\n`);
   console.log(`  Endpoints:`);
-  console.log(`    POST /count-tokens — proxies to Anthropic's token counting API\n`);
+  console.log(`    GET  /                — serves the token counter app`);
+  console.log(`    POST /count-tokens   — proxies to Anthropic's token counting API\n`);
 });

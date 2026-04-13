@@ -4,19 +4,19 @@ A team tool for counting tokens in Claude API prompts and getting actionable sug
 
 ## Quick Start
 
-**Open `token-counter.html` in any browser.** That's it for Quick Estimate mode — no installs, no dependencies.
-
-For Exact Count mode (uses the Anthropic API for precise token counts):
-
 ```bash
 # One-time setup
 npm install express
 
-# Start the proxy server
+# Start the server
 node server.js
 ```
 
-Then switch to "Exact Count (API)" in the app, paste your API key (`sk-ant-...`), and count. Your key is sent per-request to the local proxy and never stored.
+Then open **http://localhost:3456** in your browser. That's it.
+
+Quick Estimate mode works immediately — no API key needed. For Exact Count mode, switch the toggle and paste your Anthropic API key (`sk-ant-...`). Your key is sent per-request and never stored.
+
+You can also open `token-counter.html` directly in a browser (double-click the file) for Quick Estimate mode without running the server.
 
 ## Features
 
@@ -44,7 +44,7 @@ Then switch to "Exact Count (API)" in the app, paste your API key (`sk-ant-...`)
 | File | Description |
 |------|-------------|
 | `token-counter.html` | Self-contained app — just open in a browser |
-| `server.js` | Express proxy server for exact API-based token counting |
+| `server.js` | Serves the app and proxies API requests to Anthropic |
 | `token-counter.jsx` | React version (requires React tooling) |
 
 ## Pricing Reference
