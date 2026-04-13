@@ -2,16 +2,31 @@
 
 A team tool for counting tokens in Claude API prompts and getting actionable suggestions to reduce token usage and costs.
 
+## Quick Start
+
+**Open `token-counter.html` in any browser.** That's it for Quick Estimate mode — no installs, no dependencies.
+
+For Exact Count mode (uses the Anthropic API for precise token counts):
+
+```bash
+# One-time setup
+npm install express
+
+# Start the proxy server
+node server.js
+```
+
+Then switch to "Exact Count (API)" in the app, paste your API key (`sk-ant-...`), and count. Your key is sent per-request to the local proxy and never stored.
+
 ## Features
 
-- **Token Counting** — Quick local estimates or exact counts via the Anthropic API
+- **Token Counting** — Quick local estimates or exact counts via the Anthropic `/v1/messages/count_tokens` endpoint
 - **Model Cost Comparison** — Side-by-side pricing across Opus 4.6, Sonnet 4.6, and Haiku 4.5 (standard + Batch API)
-- **Token Optimizer** — Analyzes prompts for 10 common token-wasting patterns and provides specific fix suggestions
+- **Token Optimizer** — Analyzes prompts for 10 common token-wasting patterns and provides specific fix suggestions with estimated savings
 - **Scale Estimator** — Project daily/monthly costs based on expected request volume
+- **Built-in Caveats** — Inline warnings about estimate accuracy, hidden overhead, and pricing limitations so your team makes informed decisions
 
-## Optimization Rules
-
-The optimizer detects:
+## What the Optimizer Detects
 
 - Instructions that should be moved to a cacheable system prompt
 - Prompt caching opportunities (90% savings on repeat content)
@@ -24,32 +39,13 @@ The optimizer detects:
 - Verbose XML tag names
 - Batch API opportunities (50% off)
 
-## Setup
-
-### Quick Estimate Mode (no setup)
-
-Open `token-counter.jsx` in any React-compatible environment. Paste a prompt and click **Estimate Tokens**.
-
-### Exact Count Mode (requires API key)
-
-The Anthropic API doesn't allow direct browser calls (CORS), so a lightweight local proxy is included.
-
-```bash
-# Install the one dependency
-npm install express
-
-# Start the proxy server
-node server.js
-```
-
-The proxy runs on `localhost:3456` and forwards requests to Anthropic's `/v1/messages/count_tokens` endpoint. Your API key is sent per-request and never stored.
-
 ## Files
 
 | File | Description |
 |------|-------------|
-| `token-counter.jsx` | React app — token counter, cost comparison, and optimizer UI |
-| `server.js` | Express proxy server for Anthropic API calls |
+| `token-counter.html` | Self-contained app — just open in a browser |
+| `server.js` | Express proxy server for exact API-based token counting |
+| `token-counter.jsx` | React version (requires React tooling) |
 
 ## Pricing Reference
 
@@ -60,6 +56,17 @@ Based on [Anthropic's official pricing](https://platform.claude.com/docs/en/abou
 | Opus 4.6 | $5/MTok | $25/MTok | $2.50/MTok | $12.50/MTok |
 | Sonnet 4.6 | $3/MTok | $15/MTok | $1.50/MTok | $7.50/MTok |
 | Haiku 4.5 | $1/MTok | $5/MTok | $0.50/MTok | $2.50/MTok |
+
+## Important Caveats
+
+These are also displayed in the app itself, but worth noting here:
+
+1. **Local estimates are approximate** — the heuristic works well for English prose but is less accurate for code, non-Latin scripts, and structured formats like JSON/XML
+2. **Output tokens are unpredictable** — the API only counts input tokens; the output slider is a manual guess
+3. **Hidden system tokens aren't counted** — tool definitions add 300-700+ tokens per request that don't appear in your prompt
+4. **Caching savings require implementation** — the optimizer identifies opportunities, but you need to implement `cache_control` in your API calls
+5. **Pricing is hardcoded** — rates reflect April 2026 and need manual updates if Anthropic changes pricing
+6. **Costs are a lower bound** — real bills include output tokens, tool overhead, images, and web search charges
 
 ## License
 

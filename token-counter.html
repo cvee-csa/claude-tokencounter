@@ -1,0 +1,699 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Claude Token Counter & Optimizer</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #F9FAFB; color: #1F2937; line-height: 1.5; padding: 32px 16px; }
+    .app { max-width: 920px; margin: 0 auto; }
+    h1 { font-size: 28px; font-weight: 800; text-align: center; }
+    .subtitle { color: #6B7280; font-size: 14px; text-align: center; margin-top: 6px; margin-bottom: 28px; }
+    code { background: #FEF3C7; padding: 1px 5px; border-radius: 3px; font-size: 12px; }
+
+    /* ── Tabs ── */
+    .tab-bar { display: flex; border-bottom: 2px solid #E5E7EB; margin-bottom: 24px; }
+    .tab-btn { padding: 10px 24px; border: none; border-bottom: 2px solid transparent; margin-bottom: -2px; font-size: 14px; font-weight: 600; cursor: pointer; background: none; color: #6B7280; transition: all 0.15s; }
+    .tab-btn.active { color: #D97706; border-bottom-color: #D97706; }
+
+    /* ── Mode toggle ── */
+    .mode-bar { display: flex; background: #F3F4F6; border-radius: 8px; padding: 3px; margin-bottom: 20px; width: fit-content; }
+    .mode-btn { padding: 8px 20px; border: none; border-radius: 6px; font-size: 13px; font-weight: 600; cursor: pointer; background: transparent; color: #6B7280; transition: all 0.15s; }
+    .mode-btn.active { background: white; color: #1F2937; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+
+    /* ── Inputs ── */
+    textarea, input[type="text"], input[type="password"], input[type="number"] {
+      width: 100%; padding: 12px 14px; border: 1px solid #D1D5DB; border-radius: 8px;
+      font-size: 14px; font-family: monospace; resize: vertical; line-height: 1.6;
+    }
+    textarea.main { min-height: 180px; border-radius: 10px; }
+    textarea.system { min-height: 80px; margin-bottom: 12px; }
+
+    /* ── Buttons ── */
+    .btn-primary { padding: 10px 28px; background: #D97706; color: white; border: none; border-radius: 8px; font-size: 14px; font-weight: 700; cursor: pointer; transition: background 0.15s; }
+    .btn-primary:disabled { background: #9CA3AF; cursor: default; }
+    .btn-link { background: none; border: none; font-size: 13px; color: #6B7280; cursor: pointer; text-decoration: underline; padding: 0; }
+    .btn-show { background: none; border: none; font-size: 11px; color: #6B7280; cursor: pointer; text-decoration: underline; }
+
+    /* ── Cards ── */
+    .card { background: white; border: 1px solid #E5E7EB; border-radius: 10px; padding: 16px 20px; margin-bottom: 16px; }
+    .cost-card { border-radius: 12px; padding: 20px; flex: 1; min-width: 220px; }
+    .cost-row { display: flex; justify-content: space-between; font-size: 13px; color: #4B5563; margin-bottom: 2px; }
+    .cost-total { display: flex; justify-content: space-between; font-size: 15px; font-weight: 700; padding-top: 6px; margin-top: 4px; }
+    .cost-label { font-size: 11px; color: #9CA3AF; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 4px; }
+    .cost-rate { font-size: 11px; color: #9CA3AF; margin-top: 12px; }
+    .mono { font-family: monospace; }
+
+    /* ── Flex helpers ── */
+    .flex { display: flex; }
+    .flex-wrap { flex-wrap: wrap; }
+    .gap-16 { gap: 16px; }
+    .gap-8 { gap: 8px; }
+    .gap-32 { gap: 32px; }
+    .items-center { align-items: center; }
+    .justify-between { justify-content: space-between; }
+    .ml-auto { margin-left: auto; }
+
+    /* ── Note boxes ── */
+    .note-warn { font-size: 12px; color: #92400E; background: #FFFBEB; border: 1px solid #FDE68A; border-radius: 6px; padding: 8px 12px; margin-bottom: 16px; line-height: 1.5; }
+    .note-info { font-size: 11px; color: #6B7280; background: #F9FAFB; border: 1px solid #E5E7EB; border-radius: 6px; padding: 8px 12px; margin-bottom: 16px; line-height: 1.5; }
+    .note-error { background: #FEF2F2; border: 1px solid #FECACA; border-radius: 8px; padding: 10px 14px; color: #B91C1C; font-size: 13px; margin-bottom: 16px; }
+
+    /* ── Optimizer ── */
+    .optimizer-panel { background: #FAFAFA; border: 1px solid #E5E7EB; border-radius: 12px; padding: 24px; margin-top: 24px; }
+    .suggestion-card { background: white; border: 1px solid #E5E7EB; border-radius: 10px; margin-bottom: 10px; overflow: hidden; }
+    .suggestion-header { width: 100%; display: flex; align-items: center; gap: 10px; padding: 12px 16px; background: none; border: none; cursor: pointer; text-align: left; font-size: 14px; }
+    .suggestion-body { padding: 0 16px 14px 16px; font-size: 13px; color: #4B5563; line-height: 1.65; }
+    .badge { font-size: 10px; font-weight: 700; padding: 2px 8px; border-radius: 4px; text-transform: uppercase; letter-spacing: 0.5px; white-space: nowrap; }
+    .badge-savings { background: #ECFDF5; color: #059669; font-size: 12px; font-weight: 700; }
+    .fix-label { font-size: 11px; color: #6B7280; background: #F3F4F6; padding: 3px 10px; border-radius: 4px; font-weight: 600; }
+
+    /* ── Score ring ── */
+    .score-ring { position: relative; width: 64px; height: 64px; }
+    .score-value { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 18px; font-family: monospace; }
+
+    /* ── Scale estimator ── */
+    .scale-panel { background: #F9FAFB; border: 1px solid #E5E7EB; border-radius: 12px; padding: 20px; margin-top: 20px; }
+    .scale-card { flex: 1; min-width: 150px; padding: 12px; background: white; border-radius: 8px; border: 1px solid #E5E7EB; }
+
+    /* ── Limitations ── */
+    .limits-panel { margin-top: 28px; border: 1px solid #E5E7EB; border-radius: 10px; overflow: hidden; }
+    .limits-toggle { width: 100%; display: flex; align-items: center; justify-content: space-between; padding: 14px 20px; background: #F9FAFB; border: none; cursor: pointer; font-size: 14px; font-weight: 700; color: #374151; }
+    .limits-body { padding: 0 20px 20px; }
+    .limits-item { margin-bottom: 14px; padding-bottom: 14px; }
+    .limits-item:not(:last-child) { border-bottom: 1px solid #F3F4F6; }
+    .limits-title { font-weight: 700; font-size: 13px; color: #1F2937; margin-bottom: 4px; }
+    .limits-detail { font-size: 12px; color: #4B5563; line-height: 1.6; }
+    .limits-links { margin-top: 8px; padding: 10px 14px; background: #EFF6FF; border-radius: 6px; font-size: 12px; color: #1E40AF; line-height: 1.5; }
+    .limits-links a { color: #1E40AF; }
+
+    /* ── Setup guide ── */
+    .setup-guide { background: #FFFBEB; border: 1px solid #FDE68A; border-radius: 10px; padding: 20px; margin-top: 24px; font-size: 13px; color: #92400E; line-height: 1.7; }
+    .setup-guide pre { background: #1F2937; color: #F9FAFB; padding: 14px; border-radius: 8px; overflow: auto; font-size: 12px; line-height: 1.5; margin: 8px 0; }
+
+    /* ── Quick reference ── */
+    .qref { display: grid; grid-template-columns: 1fr 1fr; gap: 8px 24px; font-size: 12px; color: #4B5563; line-height: 1.6; }
+    .qref strong { color: #059669; }
+
+    /* ── Optimizer caveats ── */
+    .opt-caveats { margin-top: 20px; padding: 16px; background: #FFFBEB; border: 1px solid #FDE68A; border-radius: 8px; font-size: 12px; color: #92400E; line-height: 1.65; }
+    .opt-caveats strong { font-weight: 700; }
+    .opt-caveats > div:not(:last-child) { margin-bottom: 6px; }
+
+    .chevron { color: #9CA3AF; font-size: 16px; transition: transform 0.15s; display: inline-block; }
+    .chevron.open { transform: rotate(180deg); }
+
+    .hidden { display: none; }
+  </style>
+</head>
+<body>
+<div class="app" id="app">
+  <h1>Claude Token Counter & Optimizer</h1>
+  <p class="subtitle">Count tokens, compare costs, and get suggestions to reduce token usage</p>
+
+  <!-- Tab bar -->
+  <div class="tab-bar">
+    <button class="tab-btn active" data-tab="counter">Token Counter</button>
+    <button class="tab-btn" data-tab="optimizer">Optimizer</button>
+  </div>
+
+  <!-- Mode toggle -->
+  <div class="mode-bar">
+    <button class="mode-btn active" data-mode="estimate">Quick Estimate</button>
+    <button class="mode-btn" data-mode="api">Exact Count (API)</button>
+  </div>
+
+  <!-- Mode caveat (estimate) -->
+  <div class="note-warn" id="estimate-caveat">
+    <strong>Note:</strong> Quick Estimate uses a heuristic (~4 chars/token, ~1.33 tokens/word). Accuracy varies for code, JSON/XML, and non-English text. Use <strong>Exact Count</strong> for precise results.
+  </div>
+
+  <!-- API key (hidden by default) -->
+  <div id="api-key-section" class="hidden" style="margin-bottom: 16px;">
+    <div class="flex items-center gap-8" style="margin-bottom: 6px;">
+      <label style="font-size: 13px; font-weight: 600; color: #374151;">API Key</label>
+      <button class="btn-show" id="toggle-key-vis">show</button>
+    </div>
+    <input type="password" id="api-key" placeholder="sk-ant-..." />
+    <div style="font-size: 11px; color: #9CA3AF; margin-top: 4px;">Your key is only sent to the local proxy server, never stored.</div>
+  </div>
+
+  <!-- System prompt -->
+  <button class="btn-link" id="toggle-system" style="margin-bottom: 8px;">+ Add system prompt</button>
+  <textarea class="system hidden" id="system-prompt" placeholder="Enter your system prompt here..."></textarea>
+
+  <!-- Main prompt -->
+  <textarea class="main" id="prompt" placeholder="Paste your prompt here to count tokens and get optimization suggestions..."></textarea>
+
+  <!-- Count row -->
+  <div class="flex justify-between items-center" style="margin-top: 8px; margin-bottom: 16px;">
+    <span style="font-size: 12px; color: #9CA3AF;" id="char-count">0 characters</span>
+    <button class="btn-primary" id="count-btn" disabled>Estimate Tokens</button>
+  </div>
+
+  <!-- Error -->
+  <div class="note-error hidden" id="error-msg"></div>
+
+  <!-- ═══════ COUNTER TAB ═══════ -->
+  <div id="tab-counter" class="hidden">
+    <!-- Token summary bar -->
+    <div class="card flex gap-32 items-center flex-wrap">
+      <div>
+        <div class="cost-label" id="input-label">INPUT TOKENS (EST.)</div>
+        <div style="font-size: 26px; font-weight: 800; color: #D97706; font-family: monospace;" id="input-tokens">0</div>
+      </div>
+      <div>
+        <div class="cost-label">EXPECTED OUTPUT (MANUAL ESTIMATE)</div>
+        <div class="flex items-center gap-8">
+          <input type="range" min="1" max="8192" value="256" id="output-slider" style="width: 120px;" />
+          <span style="font-size: 18px; font-weight: 700; font-family: monospace;" id="output-tokens">256</span>
+        </div>
+        <div style="font-size: 10px; color: #9CA3AF; margin-top: 2px;">Actual output varies by task. Output tokens cost 3-5x more than input.</div>
+      </div>
+      <div class="ml-auto flex items-center gap-8">
+        <label style="font-size: 12px; color: #6B7280;">Show Batch pricing</label>
+        <input type="checkbox" id="show-batch" />
+      </div>
+    </div>
+
+    <!-- Hidden overhead note -->
+    <div class="note-info">
+      <strong>Note:</strong> Costs shown reflect your prompt text only. Tool use definitions add ~300-700 hidden system tokens per request (not counted here). Treat these as a <strong>lower bound</strong> for budgeting.
+    </div>
+
+    <!-- Cost cards -->
+    <div class="flex gap-16 flex-wrap" id="cost-cards"></div>
+
+    <!-- Scale estimator -->
+    <div class="scale-panel">
+      <div style="font-weight: 700; font-size: 15px; margin-bottom: 12px;">Scale Estimator</div>
+      <div class="flex items-center gap-8" style="margin-bottom: 16px;">
+        <label style="font-size: 13px; color: #4B5563;">Requests per day:</label>
+        <input type="number" value="100" min="1" id="requests-per-day" style="width: 100px; padding: 6px 10px; font-family: monospace;" />
+      </div>
+      <div class="flex gap-16 flex-wrap" id="scale-cards"></div>
+    </div>
+  </div>
+
+  <!-- ═══════ OPTIMIZER TAB ═══════ -->
+  <div id="tab-optimizer" class="hidden"></div>
+
+  <!-- Setup guide (API mode) -->
+  <div class="setup-guide hidden" id="setup-guide">
+    <div style="font-weight: 700; margin-bottom: 8px;">Setup Guide for Exact Counting</div>
+    <p style="margin: 0 0 8px;">Due to browser CORS restrictions, API calls go through a lightweight local proxy. Run the companion <code>server.js</code> file:</p>
+    <pre># Install dependency (one-time)
+npm install express
+
+# Run the proxy server
+node server.js</pre>
+    <p style="margin: 8px 0 0;">The proxy runs on <code>localhost:3456</code> and forwards your requests to the Anthropic API. Your API key is never stored.</p>
+  </div>
+
+  <!-- Limitations -->
+  <div class="limits-panel">
+    <button class="limits-toggle" id="limits-toggle">
+      <span>Limitations & Caveats</span>
+      <span class="chevron">&#x25BE;</span>
+    </button>
+    <div class="limits-body hidden" id="limits-body">
+      <p style="font-size: 13px; color: #6B7280; margin: 12px 0 16px; line-height: 1.5;">
+        This tool provides estimates to help your team plan and optimize Claude API usage. Keep these limitations in mind when making budget decisions.
+      </p>
+      <div class="limits-item">
+        <div class="limits-title">1. Local estimate accuracy</div>
+        <div class="limits-detail">Quick Estimate uses a heuristic that averages character-based (~4 chars/token) and word-based (~1.33 tokens/word) counts. This is a reasonable approximation for standard English prose, but can diverge significantly for code (symbols and indentation tokenize differently), non-Latin scripts (especially CJK, which often use more tokens per character), and heavily structured content like JSON, XML, or markdown tables. For budget-critical decisions, always use Exact Count mode.</div>
+      </div>
+      <div class="limits-item">
+        <div class="limits-title">2. Output tokens are unpredictable</div>
+        <div class="limits-detail">The Anthropic token counting API only measures input tokens. The output slider in this app is a manual estimate — actual output length depends on the task complexity, how Claude interprets the prompt, and whether you've set max_tokens in your API call. Output tokens are 3-5x more expensive than input tokens, so underestimating output length can meaningfully affect cost projections.</div>
+      </div>
+      <div class="limits-item">
+        <div class="limits-title">3. Hidden system token overhead</div>
+        <div class="limits-detail">When you use features like tool definitions, computer use, or text editor tools, Claude automatically injects internal system prompt tokens (roughly 300-700+ tokens depending on the model and tools configured). These are billed as input tokens but don't appear in your prompt text. This app counts only what you type — so real API bills will be higher than shown, especially for tool-heavy workflows.</div>
+      </div>
+      <div class="limits-item">
+        <div class="limits-title">4. Prompt caching requires implementation</div>
+        <div class="limits-detail">The optimizer flags content that could benefit from caching, but savings only materialize if you actually implement the cache_control parameter in your API calls and make repeat requests within the cache window (5 minutes or 1 hour). One-off requests see no caching benefit, and cached content must meet a minimum size threshold that varies by model.</div>
+      </div>
+      <div class="limits-item">
+        <div class="limits-title">5. Pricing is a point-in-time snapshot</div>
+        <div class="limits-detail">Token rates in this app are hardcoded based on Anthropic's published pricing as of April 2026. If Anthropic adjusts pricing, introduces new models, or changes tier structures, the cost figures here will be stale until manually updated. Always cross-check against the official pricing page for budget approvals.</div>
+      </div>
+      <div class="limits-item" style="border-bottom: none;">
+        <div class="limits-title">6. Cost figures are a lower bound</div>
+        <div class="limits-detail">The costs shown reflect only the tokens you can see in this tool. Real-world API costs also include: output tokens (which depend on Claude's response), tool-use system tokens, any image/PDF input tokens, web search charges ($10/1,000 searches), and potential long-context premiums. Treat the figures here as a floor, not a ceiling.</div>
+      </div>
+      <div class="limits-links">
+        For the most current pricing and API details, see
+        <a href="https://platform.claude.com/docs/en/about-claude/pricing" target="_blank" rel="noopener noreferrer">Anthropic's official pricing</a>
+        and the
+        <a href="https://platform.claude.com/docs/en/api/messages-count-tokens" target="_blank" rel="noopener noreferrer">token counting API reference</a>.
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+// ─── Model Data ────────────────────────────────────────────────────────
+const MODELS = [
+  { id: "claude-opus-4-6", name: "Opus 4.6", tier: "Most Capable", inputPer1M: 5.0, outputPer1M: 25.0, batchInputPer1M: 2.5, batchOutputPer1M: 12.5, color: "#7C3AED", bgLight: "#F5F3FF", borderLight: "#DDD6FE" },
+  { id: "claude-sonnet-4-6", name: "Sonnet 4.6", tier: "Balanced", inputPer1M: 3.0, outputPer1M: 15.0, batchInputPer1M: 1.5, batchOutputPer1M: 7.5, color: "#2563EB", bgLight: "#EFF6FF", borderLight: "#BFDBFE" },
+  { id: "claude-haiku-4-5-20251001", name: "Haiku 4.5", tier: "Fastest", inputPer1M: 1.0, outputPer1M: 5.0, batchInputPer1M: 0.5, batchOutputPer1M: 2.5, color: "#059669", bgLight: "#ECFDF5", borderLight: "#A7F3D0" },
+];
+
+// ─── Optimization Rules ────────────────────────────────────────────────
+const OPTIMIZATION_RULES = [
+  {
+    id: "no-system-prompt", category: "structure",
+    check(prompt, system, tokens) {
+      if (system && system.trim().length > 0) return null;
+      const pats = [/you are a/i, /act as/i, /your role/i, /you should always/i, /respond in/i, /format your/i, /always include/i, /never include/i, /you must/i, /your task is/i, /instructions:/i, /guidelines:/i];
+      if (!pats.some(p => p.test(prompt))) return null;
+      const lines = prompt.split("\n").filter(l => pats.some(p => p.test(l)));
+      const est = Math.max(estimateTokens(lines.join("\n")), Math.round(tokens * 0.15));
+      return { title: "Move instructions to a system prompt", detail: 'Your prompt contains behavioral instructions ("you are", "act as", etc.) mixed in with the user message. Moving these to a dedicated system prompt makes them cacheable with prompt caching — you\'d pay full price once, then 90% less on subsequent requests.', savingsPercent: 0, savingsTokens: 0, cacheSavingsTokens: est, fix: "caching" };
+    }
+  },
+  {
+    id: "caching-opportunity", category: "structure",
+    check(prompt, system, tokens) {
+      if (!system || system.trim().length === 0) return null;
+      const sysT = estimateTokens(system);
+      if (sysT < 200) return null;
+      return { title: "Enable prompt caching on your system prompt", detail: `Your system prompt is ~${fmtTok(sysT)} tokens. With prompt caching, repeat calls pay only 10% of the input price for cached content. At 100 requests/day, this saves ~${fmtTok(Math.round(sysT * 99 * 0.9))} tokens worth of cost daily.`, savingsPercent: 0, savingsTokens: 0, cacheSavingsTokens: sysT, fix: "caching" };
+    }
+  },
+  {
+    id: "repeated-phrases", category: "redundancy",
+    check(prompt, system, tokens) {
+      const text = prompt + " " + (system || "");
+      const sents = text.split(/[.!?\n]+/).map(s => s.trim().toLowerCase()).filter(s => s.length > 20);
+      const seen = {}, dupes = [];
+      for (const s of sents) { if (seen[s]) dupes.push(s); else seen[s] = true; }
+      if (!dupes.length) return null;
+      const dt = dupes.reduce((s, d) => s + estimateTokens(d), 0);
+      return { title: `${dupes.length} repeated sentence${dupes.length > 1 ? "s" : ""} detected`, detail: `Found duplicate sentences that can be removed: "${dupes[0].slice(0, 60)}..."${dupes.length > 1 ? ` and ${dupes.length - 1} more` : ""}. Removing these saves ~${fmtTok(dt)} tokens per request.`, savingsPercent: Math.round((dt / Math.max(tokens, 1)) * 100), savingsTokens: dt, fix: "edit" };
+    }
+  },
+  {
+    id: "verbose-phrasing", category: "redundancy",
+    check(prompt, system, tokens) {
+      const text = prompt + " " + (system || "");
+      const vp = [
+        { p: /I would like you to please/gi, r: "Please" }, { p: /Could you please be so kind as to/gi, r: "Please" },
+        { p: /It is important to note that/gi, r: "(remove)" }, { p: /In order to/gi, r: "To" },
+        { p: /Please make sure that you/gi, r: "Please" }, { p: /I want you to/gi, r: "(just state it)" },
+        { p: /What I need you to do is/gi, r: "(just state it)" }, { p: /It should be noted that/gi, r: "(remove)" },
+        { p: /The reason for this is because/gi, r: "Because" }, { p: /Due to the fact that/gi, r: "Because" },
+        { p: /In the event that/gi, r: "If" }, { p: /At this point in time/gi, r: "Now" },
+        { p: /For the purpose of/gi, r: "To" }, { p: /In spite of the fact that/gi, r: "Although" },
+        { p: /With regard to/gi, r: "About" }, { p: /It is essential that/gi, r: "(just state it)" },
+        { p: /Please ensure that/gi, r: "Ensure" }, { p: /I would appreciate it if you could/gi, r: "Please" },
+      ];
+      const matches = [];
+      for (const { p, r } of vp) { const f = text.match(p); if (f) matches.push({ phrase: f[0], replacement: r, count: f.length }); }
+      if (!matches.length) return null;
+      const est = matches.reduce((s, m) => s + estimateTokens(m.phrase) * m.count * 0.5, 0);
+      const examples = matches.slice(0, 3).map(m => `"${m.phrase}" → ${m.replacement}`).join("; ");
+      return { title: `${matches.length} verbose phrase pattern${matches.length > 1 ? "s" : ""} found`, detail: `Tightening wordy phrases saves tokens without losing meaning. Examples: ${examples}.`, savingsPercent: Math.round((est / Math.max(tokens, 1)) * 100), savingsTokens: Math.round(est), fix: "edit" };
+    }
+  },
+  {
+    id: "excessive-examples", category: "content",
+    check(prompt, system, tokens) {
+      const text = prompt + " " + (system || "");
+      const m = text.match(/(example\s*\d|e\.g\.|for instance|such as|here is an example|sample \d|example:)/gi);
+      if (!m || m.length < 4) return null;
+      const est = Math.round(tokens * 0.3);
+      return { title: `${m.length} examples detected — consider reducing`, detail: "Claude typically needs only 2-3 well-chosen examples to understand a pattern. More examples add tokens without proportionally improving quality. Consider keeping your best 2-3 and removing the rest.", savingsPercent: Math.round(((m.length - 3) / m.length) * 30), savingsTokens: Math.round(est * ((m.length - 3) / m.length)), fix: "edit" };
+    }
+  },
+  {
+    id: "large-pasted-content", category: "content",
+    check(prompt, system, tokens) {
+      if (tokens < 2000) return null;
+      const score = [prompt.split("\n").length > 80, /\b(chapter|section|page|abstract|introduction|conclusion|references)\b/gi.test(prompt), prompt.length > 10000].filter(Boolean).length;
+      if (score < 2) return null;
+      return { title: "Large document pasted — consider pre-processing", detail: "This prompt appears to contain a large pasted document. Consider extracting only the relevant sections, summarizing first with a cheaper Haiku call, or using document-level prompt caching if you'll query this document multiple times.", savingsPercent: 40, savingsTokens: Math.round(tokens * 0.4), fix: "strategy" };
+    }
+  },
+  {
+    id: "whitespace-bloat", category: "content",
+    check(prompt, system, tokens) {
+      const text = prompt + " " + (system || "");
+      const comp = text.replace(/[ \t]+/g, " ").replace(/\n{3,}/g, "\n\n").trim();
+      const saved = text.length - comp.length;
+      const st = Math.round(saved / 4);
+      if (st < 20) return null;
+      return { title: "Excess whitespace can be trimmed", detail: `Found ~${saved} unnecessary whitespace characters. Compressing these saves ~${fmtTok(st)} tokens.`, savingsPercent: Math.round((st / Math.max(tokens, 1)) * 100), savingsTokens: st, fix: "auto" };
+    }
+  },
+  {
+    id: "model-downgrade", category: "strategy",
+    check(prompt, system, tokens) {
+      const text = (prompt + " " + (system || "")).toLowerCase();
+      const pats = [/summarize/i, /extract/i, /classify/i, /categorize/i, /translate/i, /format/i, /convert/i, /list/i, /sort/i, /rewrite/i, /proofread/i, /spell.?check/i, /grammar/i];
+      if (pats.filter(p => p.test(text)).length < 1 || tokens > 8000) return null;
+      return { title: "This task may work well with a smaller model", detail: "Tasks like summarization, extraction, classification, translation, and formatting often perform well on Haiku 4.5 at 1/3 the cost of Sonnet (and 1/5 of Opus). Consider testing with Haiku first and only upgrading if quality isn't sufficient.", savingsPercent: 67, savingsTokens: 0, fix: "strategy" };
+    }
+  },
+  {
+    id: "batch-api", category: "strategy",
+    check(prompt, system, tokens) {
+      if (tokens < 100) return null;
+      return { title: "Use the Batch API for non-urgent requests", detail: "If this request doesn't need a real-time response, the Batch API provides a flat 50% discount on both input and output tokens. Batches process within 24 hours and are ideal for data processing, content generation, and analysis pipelines.", savingsPercent: 50, savingsTokens: 0, fix: "strategy" };
+    }
+  },
+  {
+    id: "output-constraint", category: "strategy",
+    check(prompt, system, tokens) {
+      const text = (prompt + " " + (system || "")).toLowerCase();
+      if (/(be (brief|concise|short)|max(imum)?\s*\d+\s*(word|sentence|paragraph|token)|keep.*(short|brief)|limit.*(response|answer|output))/i.test(text)) return null;
+      return { title: "Add output length constraints", detail: 'Your prompt doesn\'t specify a desired output length. Adding instructions like "respond in 2-3 sentences" or "keep your answer under 200 words" prevents Claude from generating unnecessarily long responses, directly reducing output token costs (which are 3-5x more expensive than input tokens).', savingsPercent: 0, savingsTokens: 0, fix: "edit" };
+    }
+  },
+  {
+    id: "xml-structure", category: "structure",
+    check(prompt, system, tokens) {
+      const text = prompt + " " + (system || "");
+      const tags = text.match(/<[a-zA-Z_][^>]*>/g);
+      if (!tags || tags.length < 2) return null;
+      const long = tags.filter(t => t.length > 25);
+      if (!long.length) return null;
+      const st = Math.round(long.reduce((s, t) => s + (t.length - 10) * 2, 0) / 4);
+      return { title: "Shorten XML tag names", detail: `Found ${long.length} verbose XML tag name${long.length > 1 ? "s" : ""} (e.g., ${long[0]}). Claude works just as well with short names like <ctx>, <inst>, <ex>. This saves ~${fmtTok(st)} tokens.`, savingsPercent: Math.round((st / Math.max(tokens, 1)) * 100), savingsTokens: st, fix: "edit" };
+    }
+  },
+  {
+    id: "repeated-context-hint", category: "strategy",
+    check(prompt, system, tokens) {
+      if (tokens < 500) return null;
+      if (!/\b(conversation|chat|history|previous|earlier|above)\b/i.test(prompt + " " + (system || ""))) return null;
+      return { title: "Use prompt caching for multi-turn conversations", detail: "This prompt references conversation history. With prompt caching, you pay full price for the conversation prefix only once, then just 10% on subsequent turns. For a 10-turn conversation, this can reduce total input costs by 50-80%.", savingsPercent: 60, savingsTokens: 0, cacheSavingsTokens: Math.round(tokens * 0.6), fix: "caching" };
+    }
+  },
+];
+
+// ─── Helpers ───────────────────────────────────────────────────────────
+function fmtCost(d) { if (d < 0.001) return "$" + d.toFixed(6); if (d < 0.01) return "$" + d.toFixed(4); if (d < 1) return "$" + d.toFixed(3); return "$" + d.toFixed(2); }
+function fmtTok(n) { if (n >= 1e6) return (n / 1e6).toFixed(2) + "M"; if (n >= 1e3) return (n / 1e3).toFixed(1) + "K"; return n.toLocaleString(); }
+function estimateTokens(text) {
+  if (!text || !text.trim()) return 0;
+  const cc = text.length, wc = text.split(/\s+/).filter(Boolean).length;
+  return Math.ceil((Math.ceil(cc / 4) + Math.ceil(wc * 1.33)) / 2);
+}
+function analyzePrompt(prompt, system) {
+  const tokens = estimateTokens((prompt || "") + " " + (system || ""));
+  if (!prompt || !prompt.trim()) return { suggestions: [], score: 100, tokens: 0 };
+  const suggestions = [];
+  for (const rule of OPTIMIZATION_RULES) { try { const r = rule.check(prompt, system, tokens); if (r) suggestions.push({ ...r, id: rule.id, category: rule.category }); } catch(e) {} }
+  const catOrd = { redundancy: 0, content: 1, structure: 2, strategy: 3 };
+  suggestions.sort((a, b) => (b.savingsPercent - a.savingsPercent) || ((catOrd[a.category]||9) - (catOrd[b.category]||9)));
+  const total = suggestions.reduce((s, r) => s + (r.savingsPercent || 0), 0);
+  return { suggestions, score: Math.max(0, Math.min(100, 100 - Math.min(total, 80))), tokens };
+}
+
+const CATEGORY_META = {
+  redundancy: { label: "Redundancy", color: "#DC2626", bg: "#FEF2F2" },
+  content: { label: "Content", color: "#D97706", bg: "#FFFBEB" },
+  structure: { label: "Structure", color: "#2563EB", bg: "#EFF6FF" },
+  strategy: { label: "Strategy", color: "#059669", bg: "#ECFDF5" },
+};
+const FIX_LABELS = { edit: "Edit prompt", auto: "Auto-fixable", caching: "Enable caching", strategy: "API strategy" };
+
+// ─── State ─────────────────────────────────────────────────────────────
+let state = {
+  mode: "estimate", activeTab: "counter", inputTokens: null, outputTokens: 256,
+  showBatch: false, showSystem: false, showApiKey: false, limitsOpen: false,
+};
+
+// ─── DOM refs ──────────────────────────────────────────────────────────
+const $ = id => document.getElementById(id);
+const promptEl = $("prompt"), sysEl = $("system-prompt"), apiKeyEl = $("api-key");
+
+// ─── Render: Cost Cards ────────────────────────────────────────────────
+function renderCostCards() {
+  const inp = state.inputTokens, out = state.outputTokens;
+  if (inp === null) return;
+  $("cost-cards").innerHTML = MODELS.map(m => {
+    const ic = (inp / 1e6) * m.inputPer1M, oc = (out / 1e6) * m.outputPer1M, tc = ic + oc;
+    const bic = (inp / 1e6) * m.batchInputPer1M, boc = (out / 1e6) * m.batchOutputPer1M, btc = bic + boc;
+    return `<div class="cost-card" style="background:${m.bgLight};border:1px solid ${m.borderLight}">
+      <div class="flex items-center gap-8" style="margin-bottom:4px"><div style="width:10px;height:10px;border-radius:50%;background:${m.color}"></div><span style="font-weight:700;font-size:16px">${m.name}</span></div>
+      <div style="font-size:12px;color:#6B7280;margin-bottom:16px">${m.tier}</div>
+      <div style="margin-bottom:12px">
+        <div class="cost-label">Standard API</div>
+        <div class="cost-row"><span>Input</span><span class="mono">${fmtCost(ic)}</span></div>
+        <div class="cost-row"><span>Output</span><span class="mono">${fmtCost(oc)}</span></div>
+        <div class="cost-total" style="color:${m.color};border-top:1px solid ${m.borderLight}"><span>Total</span><span class="mono">${fmtCost(tc)}</span></div>
+      </div>
+      ${state.showBatch ? `<div>
+        <div class="cost-label">Batch API (50% off)</div>
+        <div class="cost-row"><span>Input</span><span class="mono">${fmtCost(bic)}</span></div>
+        <div class="cost-row"><span>Output</span><span class="mono">${fmtCost(boc)}</span></div>
+        <div class="cost-total" style="color:${m.color};border-top:1px solid ${m.borderLight}"><span>Total</span><span class="mono">${fmtCost(btc)}</span></div>
+      </div>` : ""}
+      <div class="cost-rate">$${m.inputPer1M}/MTok in · $${m.outputPer1M}/MTok out</div>
+    </div>`;
+  }).join("");
+}
+
+function renderScaleCards() {
+  const inp = state.inputTokens, out = state.outputTokens;
+  if (inp === null) return;
+  const rpd = Math.max(1, parseInt($("requests-per-day").value) || 1);
+  $("scale-cards").innerHTML = MODELS.map(m => {
+    const di = (inp * rpd / 1e6), do_ = (out * rpd / 1e6);
+    const daily = di * m.inputPer1M + do_ * m.outputPer1M;
+    return `<div class="scale-card">
+      <div style="font-weight:600;font-size:13px;color:${m.color};margin-bottom:8px">${m.name}</div>
+      <div style="font-size:12px;color:#6B7280">Daily: <span class="mono" style="font-weight:600;color:#1F2937">${fmtCost(daily)}</span></div>
+      <div style="font-size:12px;color:#6B7280">Monthly: <span class="mono" style="font-weight:600;color:#1F2937">${fmtCost(daily * 30)}</span></div>
+    </div>`;
+  }).join("");
+}
+
+// ─── Render: Optimizer ─────────────────────────────────────────────────
+function renderOptimizer() {
+  const prompt = promptEl.value, system = sysEl.value;
+  const panel = $("tab-optimizer");
+  if (!prompt || !prompt.trim()) { panel.innerHTML = ""; return; }
+
+  const analysis = analyzePrompt(prompt, system);
+  const totalSave = analysis.suggestions.reduce((s, x) => s + (x.savingsTokens || 0), 0);
+  const totalCache = analysis.suggestions.reduce((s, x) => s + (x.cacheSavingsTokens || 0), 0);
+  const tokensUsed = state.inputTokens || analysis.tokens;
+
+  const scoreColor = analysis.score >= 80 ? "#059669" : analysis.score >= 50 ? "#D97706" : "#DC2626";
+  const scoreLabel = analysis.score >= 90 ? "Well optimized" : analysis.score >= 70 ? "Good, some room to improve" : analysis.score >= 50 ? "Several optimizations available" : "Significant savings possible";
+  const dashLen = (analysis.score / 100) * 175.9;
+
+  let html = `<div class="optimizer-panel">
+    <div class="flex items-center justify-between" style="margin-bottom:16px">
+      <h2 style="font-size:18px;font-weight:800">Token Optimizer</h2>
+      ${analysis.suggestions.length ? `<span style="font-size:13px;color:#6B7280">${analysis.suggestions.length} suggestion${analysis.suggestions.length !== 1 ? "s" : ""}</span>` : ""}
+    </div>
+    <div class="flex items-center" style="gap:16px;margin-bottom:16px">
+      <div class="score-ring">
+        <svg width="64" height="64" viewBox="0 0 64 64">
+          <circle cx="32" cy="32" r="28" fill="none" stroke="#E5E7EB" stroke-width="6"/>
+          <circle cx="32" cy="32" r="28" fill="none" stroke="${scoreColor}" stroke-width="6" stroke-linecap="round" stroke-dasharray="${dashLen} 175.9" transform="rotate(-90 32 32)"/>
+        </svg>
+        <div class="score-value" style="color:${scoreColor}">${analysis.score}</div>
+      </div>
+      <div><div style="font-weight:700;font-size:15px">Optimization Score</div><div style="font-size:13px;color:#6B7280">${scoreLabel}</div></div>
+    </div>`;
+
+  if (totalSave > 0 || totalCache > 0) {
+    html += `<div class="flex gap-16 flex-wrap" style="margin-bottom:20px">`;
+    if (totalSave > 0) html += `<div style="background:#ECFDF5;border:1px solid #A7F3D0;border-radius:8px;padding:10px 16px;flex:1;min-width:180px"><div style="font-size:11px;color:#059669;text-transform:uppercase;letter-spacing:0.5px">Potential Token Savings</div><div style="font-size:22px;font-weight:800;color:#059669;font-family:monospace">${fmtTok(totalSave)}</div><div style="font-size:12px;color:#6B7280">${Math.round((totalSave / Math.max(tokensUsed, 1)) * 100)}% of current input</div></div>`;
+    if (totalCache > 0) html += `<div style="background:#EFF6FF;border:1px solid #BFDBFE;border-radius:8px;padding:10px 16px;flex:1;min-width:180px"><div style="font-size:11px;color:#2563EB;text-transform:uppercase;letter-spacing:0.5px">Cacheable Tokens</div><div style="font-size:22px;font-weight:800;color:#2563EB;font-family:monospace">${fmtTok(totalCache)}</div><div style="font-size:12px;color:#6B7280">90% cheaper on repeat calls</div></div>`;
+    html += `</div>`;
+  }
+
+  if (!analysis.suggestions.length) {
+    html += `<div style="text-align:center;padding:24px;color:#059669;font-size:14px">Your prompt looks well-optimized! No major savings found.</div>`;
+  } else {
+    for (let i = 0; i < analysis.suggestions.length; i++) {
+      const s = analysis.suggestions[i], cat = CATEGORY_META[s.category] || CATEGORY_META.strategy;
+      const open = i < 3;
+      html += `<div class="suggestion-card" style="border-left:4px solid ${cat.color}">
+        <button class="suggestion-header" onclick="this.nextElementSibling.classList.toggle('hidden');this.querySelector('.chevron').classList.toggle('open')">
+          <span class="badge" style="background:${cat.bg};color:${cat.color}">${cat.label}</span>
+          <span style="flex:1;font-weight:600;color:#1F2937">${s.title}</span>
+          ${(s.savingsPercent > 0 || s.cacheSavingsTokens > 0) ? `<span class="badge badge-savings">${s.savingsPercent > 0 ? `~${s.savingsPercent}% savings` : s.cacheSavingsTokens ? `~${fmtTok(s.cacheSavingsTokens)} cacheable` : ""}</span>` : ""}
+          <span class="chevron${open ? " open" : ""}">&#x25BE;</span>
+        </button>
+        <div class="suggestion-body${open ? "" : " hidden"}">
+          <p style="margin:0">${s.detail}</p>
+          <div class="flex gap-8 flex-wrap" style="margin-top:10px">
+            ${s.fix ? `<span class="fix-label">${FIX_LABELS[s.fix] || s.fix}</span>` : ""}
+            ${s.savingsTokens > 0 ? `<span style="font-size:11px;color:#059669;font-weight:600">Save ~${fmtTok(s.savingsTokens)} tokens/request</span>` : ""}
+          </div>
+        </div>
+      </div>`;
+    }
+  }
+
+  // Quick reference
+  html += `<div style="margin-top:20px;padding:16px;background:white;border:1px solid #E5E7EB;border-radius:8px">
+    <div style="font-weight:700;font-size:13px;margin-bottom:10px">Quick Reference: Top Token-Saving Strategies</div>
+    <div class="qref">
+      <div><strong>Prompt Caching</strong> — 90% off repeat content</div>
+      <div><strong>Batch API</strong> — 50% off all tokens</div>
+      <div><strong>Model Selection</strong> — Haiku is 1/5 the cost of Opus</div>
+      <div><strong>Output Constraints</strong> — Limit verbose responses</div>
+      <div><strong>Fewer Examples</strong> — 2-3 is usually enough</div>
+      <div><strong>Pre-processing</strong> — Summarize before querying</div>
+    </div>
+  </div>`;
+
+  // Optimizer caveats
+  html += `<div class="opt-caveats">
+    <div style="font-weight:700;font-size:13px;margin-bottom:8px">What these suggestions can and can't tell you</div>
+    <div><strong>Savings estimates are approximate.</strong> Token savings are based on the local heuristic estimator, not the actual tokenizer. Use Exact Count mode for precise measurements.</div>
+    <div><strong>Caching savings depend on your usage patterns.</strong> The optimizer flags tokens that <em>could</em> be cached, but actual savings require implementing the <code>cache_control</code> parameter and making repeat requests within the cache TTL (5 min or 1 hour).</div>
+    <div><strong>Model downgrade suggestions need testing.</strong> When we suggest Haiku might work, it's based on task type patterns. Always validate output quality for your specific use case before switching models in production.</div>
+    <div><strong>Hidden overhead isn't analyzed.</strong> Tool definitions, image inputs, and internal system tokens (300-700+ per request) add to your actual bill but aren't reflected in these suggestions.</div>
+  </div>`;
+
+  html += `</div>`;
+  panel.innerHTML = html;
+}
+
+// ─── Core: Count tokens ────────────────────────────────────────────────
+async function countTokens() {
+  const prompt = promptEl.value, system = sysEl.value;
+  if (!prompt.trim()) return;
+
+  if (state.mode === "estimate") {
+    state.inputTokens = estimateTokens(prompt + system);
+    renderResults();
+    return;
+  }
+
+  // API mode
+  const apiKey = apiKeyEl.value.trim();
+  if (!apiKey) { showError("Please enter your Anthropic API key."); return; }
+
+  $("count-btn").disabled = true;
+  $("count-btn").textContent = "Counting...";
+  hideError();
+
+  try {
+    const body = { apiKey, model: "claude-sonnet-4-6", messages: [{ role: "user", content: prompt }] };
+    if (system.trim()) body.system = system;
+    const resp = await fetch("http://localhost:3456/count-tokens", {
+      method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body),
+    });
+    if (!resp.ok) {
+      const err = await resp.json().catch(() => ({}));
+      throw new Error(err.error || `API error: ${resp.status}`);
+    }
+    const data = await resp.json();
+    state.inputTokens = data.input_tokens;
+    renderResults();
+  } catch (e) {
+    if (e.message.includes("Failed to fetch") || e.message.includes("NetworkError")) {
+      showError("Cannot reach the proxy server. Make sure server.js is running on port 3456.");
+    } else { showError(e.message); }
+  } finally {
+    $("count-btn").disabled = false;
+    $("count-btn").textContent = state.mode === "api" ? "Count Tokens (API)" : "Estimate Tokens";
+  }
+}
+
+function renderResults() {
+  if (state.inputTokens === null) return;
+  $("input-tokens").textContent = fmtTok(state.inputTokens);
+  $("input-label").textContent = "INPUT TOKENS " + (state.mode === "estimate" ? "(EST.)" : "(EXACT)");
+  $("tab-counter").classList.remove("hidden");
+  renderCostCards();
+  renderScaleCards();
+  if (state.activeTab === "optimizer") renderOptimizer();
+}
+
+function showError(msg) { const el = $("error-msg"); el.textContent = msg; el.classList.remove("hidden"); }
+function hideError() { $("error-msg").classList.add("hidden"); }
+
+// ─── Event Wiring ──────────────────────────────────────────────────────
+// Tabs
+document.querySelectorAll(".tab-btn").forEach(btn => {
+  btn.addEventListener("click", () => {
+    document.querySelectorAll(".tab-btn").forEach(b => b.classList.remove("active"));
+    btn.classList.add("active");
+    state.activeTab = btn.dataset.tab;
+    $("tab-counter").classList.toggle("hidden", state.activeTab !== "counter" || state.inputTokens === null);
+    $("tab-optimizer").classList.toggle("hidden", state.activeTab !== "optimizer");
+    if (state.activeTab === "optimizer") renderOptimizer();
+  });
+});
+
+// Mode
+document.querySelectorAll(".mode-btn").forEach(btn => {
+  btn.addEventListener("click", () => {
+    document.querySelectorAll(".mode-btn").forEach(b => b.classList.remove("active"));
+    btn.classList.add("active");
+    state.mode = btn.dataset.mode;
+    $("estimate-caveat").classList.toggle("hidden", state.mode !== "estimate");
+    $("api-key-section").classList.toggle("hidden", state.mode !== "api");
+    $("setup-guide").classList.toggle("hidden", state.mode !== "api");
+    $("count-btn").textContent = state.mode === "api" ? "Count Tokens (API)" : "Estimate Tokens";
+    hideError();
+  });
+});
+
+// System prompt toggle
+$("toggle-system").addEventListener("click", () => {
+  state.showSystem = !state.showSystem;
+  sysEl.classList.toggle("hidden", !state.showSystem);
+  $("toggle-system").textContent = state.showSystem ? "Hide system prompt" : "+ Add system prompt";
+});
+
+// API key visibility
+$("toggle-key-vis").addEventListener("click", () => {
+  state.showApiKey = !state.showApiKey;
+  apiKeyEl.type = state.showApiKey ? "text" : "password";
+  $("toggle-key-vis").textContent = state.showApiKey ? "hide" : "show";
+});
+
+// Character count & button enable
+function updateCharCount() {
+  const c = promptEl.value.length + sysEl.value.length;
+  $("char-count").textContent = c.toLocaleString() + " characters";
+  $("count-btn").disabled = !promptEl.value.trim();
+}
+promptEl.addEventListener("input", updateCharCount);
+sysEl.addEventListener("input", updateCharCount);
+
+// Count button
+$("count-btn").addEventListener("click", countTokens);
+
+// Output slider
+$("output-slider").addEventListener("input", e => {
+  state.outputTokens = parseInt(e.target.value);
+  $("output-tokens").textContent = fmtTok(state.outputTokens);
+  renderCostCards();
+  renderScaleCards();
+});
+
+// Batch toggle
+$("show-batch").addEventListener("change", e => {
+  state.showBatch = e.target.checked;
+  renderCostCards();
+});
+
+// Scale estimator
+$("requests-per-day").addEventListener("input", renderScaleCards);
+
+// Limitations toggle
+$("limits-toggle").addEventListener("click", () => {
+  state.limitsOpen = !state.limitsOpen;
+  $("limits-body").classList.toggle("hidden", !state.limitsOpen);
+  $("limits-toggle").querySelector(".chevron").classList.toggle("open", state.limitsOpen);
+});
+</script>
+</body>
+</html>
