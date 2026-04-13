@@ -14,7 +14,23 @@ node server.js
 
 Then open **http://localhost:3456** in your browser. That's it.
 
-Quick Estimate mode works immediately — no API key needed. For Exact Count mode, switch the toggle and paste your Anthropic API key (`sk-ant-...`). Your key is sent per-request and never stored.
+Quick Estimate mode works immediately — no API key needed. For Exact Count mode, you have three options for providing your API key (pick whichever is easiest):
+
+### Option 1: Environment variable (recommended for individuals)
+```bash
+export ANTHROPIC_API_KEY=sk-ant-...
+node server.js
+```
+
+### Option 2: `.env` file (recommended for teams)
+Create a `.env` file in the project folder:
+```
+ANTHROPIC_API_KEY=sk-ant-...
+```
+Then just run `node server.js` — the key is loaded automatically. The `.env` file is git-ignored so it won't be committed.
+
+### Option 3: Paste in the browser
+Switch to "Exact Count (API)" and paste your key. The browser remembers it locally so you only need to do this once.
 
 You can also open `token-counter.html` directly in a browser (double-click the file) for Quick Estimate mode without running the server.
 
@@ -45,6 +61,8 @@ You can also open `token-counter.html` directly in a browser (double-click the f
 |------|-------------|
 | `token-counter.html` | Self-contained app — just open in a browser |
 | `server.js` | Serves the app and proxies API requests to Anthropic |
+| `.env` | (You create this) Your API key — git-ignored, never committed |
+| `.gitignore` | Keeps `.env` and `node_modules` out of the repo |
 | `token-counter.jsx` | React version (requires React tooling) |
 
 ## Pricing Reference

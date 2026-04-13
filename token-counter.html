@@ -131,12 +131,22 @@
 
   <!-- API key (hidden by default) -->
   <div id="api-key-section" class="hidden" style="margin-bottom: 16px;">
-    <div class="flex items-center gap-8" style="margin-bottom: 6px;">
-      <label style="font-size: 13px; font-weight: 600; color: #374151;">API Key</label>
-      <button class="btn-show" id="toggle-key-vis">show</button>
+    <!-- Server-key banner (shown when server has ANTHROPIC_API_KEY) -->
+    <div id="server-key-banner" class="hidden" style="font-size: 13px; color: #059669; background: #ECFDF5; border: 1px solid #A7F3D0; border-radius: 6px; padding: 10px 14px; line-height: 1.5;">
+      <strong>API key loaded from server.</strong> No need to enter one here — the server has <code>ANTHROPIC_API_KEY</code> configured.
     </div>
-    <input type="password" id="api-key" placeholder="sk-ant-..." />
-    <div style="font-size: 11px; color: #9CA3AF; margin-top: 4px;">Your key is only sent to the local proxy server, never stored.</div>
+    <!-- Manual key input (shown when server does NOT have a key) -->
+    <div id="manual-key-section">
+      <div class="flex items-center gap-8" style="margin-bottom: 6px;">
+        <label style="font-size: 13px; font-weight: 600; color: #374151;">API Key</label>
+        <button class="btn-show" id="toggle-key-vis">show</button>
+        <button class="btn-show" id="clear-saved-key" class="hidden" style="color: #DC2626;">forget saved key</button>
+      </div>
+      <input type="password" id="api-key" placeholder="sk-ant-..." />
+      <div style="font-size: 11px; color: #9CA3AF; margin-top: 4px;">
+        Your key is saved in this browser so you don't have to paste it again. It's only sent to the local server, never to any third party.
+      </div>
+    </div>
   </div>
 
   <!-- System prompt -->
@@ -427,6 +437,7 @@ const FIX_LABELS = { edit: "Edit prompt", auto: "Auto-fixable", caching: "Enable
 let state = {
   mode: "estimate", activeTab: "counter", inputTokens: null, outputTokens: 256,
   showBatch: false, showSystem: false, showApiKey: false, limitsOpen: false,
+  hasServerKey: false,
 };
 
 // ─── DOM refs ──────────────────────────────────────────────────────────
@@ -576,14 +587,19 @@ async function countTokens() {
 
   // API mode
   const apiKey = apiKeyEl.value.trim();
-  if (!apiKey) { showError("Please enter your Anthropic API key."); return; }
+  if (!state.hasServerKey && !apiKey) { showError("Please enter your Anthropic API key."); return; }
+
+  // Save key to localStorage for next time (only if user provided one)
+  if (apiKey) { try { localStorage.setItem("claude_tc_api_key", apiKey); } catch(e) {} }
 
   $("count-btn").disabled = true;
   $("count-btn").textContent = "Counting...";
   hideError();
 
   try {
-    const body = { apiKey, model: "claude-sonnet-4-6", messages: [{ role: "user", content: prompt }] };
+    const body = { model: "claude-sonnet-4-6", messages: [{ role: "user", content: prompt }] };
+    // Only send the key if the server doesn't have one
+    if (!state.hasServerKey && apiKey) body.apiKey = apiKey;
     if (system.trim()) body.system = system;
     const resp = await fetch("/count-tokens", {
       method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body),
@@ -693,6 +709,34 @@ $("limits-toggle").addEventListener("click", () => {
   state.limitsOpen = !state.limitsOpen;
   $("limits-body").classList.toggle("hidden", !state.limitsOpen);
   $("limits-toggle").querySelector(".chevron").classList.toggle("open", state.limitsOpen);
+});
+
+// Clear saved key
+$("clear-saved-key").addEventListener("click", () => {
+  try { localStorage.removeItem("claude_tc_api_key"); } catch(e) {}
+  apiKeyEl.value = "";
+  $("clear-saved-key").style.display = "none";
+});
+
+// ─── Initialization ────────────────────────────────────────────────────
+// Restore API key from localStorage
+try {
+  const savedKey = localStorage.getItem("claude_tc_api_key");
+  if (savedKey) {
+    apiKeyEl.value = savedKey;
+    $("clear-saved-key").style.display = "inline";
+  }
+} catch(e) {}
+
+// Check if server has an API key configured
+fetch("/api/config").then(r => r.json()).then(data => {
+  state.hasServerKey = !!data.hasServerKey;
+  if (state.hasServerKey) {
+    $("server-key-banner").classList.remove("hidden");
+    $("manual-key-section").classList.add("hidden");
+  }
+}).catch(() => {
+  // Server not reachable (file:// mode) — that's fine, manual key input stays
 });
 </script>
 </body>
