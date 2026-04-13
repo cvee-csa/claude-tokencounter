@@ -5,44 +5,124 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Claude Token Counter & Optimizer</title>
   <style>
+    :root {
+      --bg-body: #F9FAFB;
+      --bg-card: #FFFFFF;
+      --bg-secondary: #F3F4F6;
+      --bg-tertiary: #F9FAFB;
+      --text-primary: #1F2937;
+      --text-secondary: #4B5563;
+      --text-muted: #6B7280;
+      --text-faint: #9CA3AF;
+      --border: #E5E7EB;
+      --border-light: #F3F4F6;
+      --accent: #D97706;
+      --accent-hover: #B45309;
+      --code-bg: #FEF3C7;
+      --code-text: inherit;
+      --input-bg: #FFFFFF;
+      --input-border: #D1D5DB;
+      --warn-bg: #FFFBEB;
+      --warn-border: #FDE68A;
+      --warn-text: #92400E;
+      --error-bg: #FEF2F2;
+      --error-border: #FECACA;
+      --error-text: #B91C1C;
+      --success-bg: #ECFDF5;
+      --success-border: #A7F3D0;
+      --success-text: #059669;
+      --info-bg: #EFF6FF;
+      --info-border: #BFDBFE;
+      --info-text: #2563EB;
+      --shadow: 0 1px 3px rgba(0,0,0,0.1);
+      --pre-bg: #1F2937;
+      --pre-text: #F9FAFB;
+      --mode-active-bg: #FFFFFF;
+    }
+    [data-theme="dark"] {
+      --bg-body: #0F172A;
+      --bg-card: #1E293B;
+      --bg-secondary: #1E293B;
+      --bg-tertiary: #1E293B;
+      --text-primary: #F1F5F9;
+      --text-secondary: #CBD5E1;
+      --text-muted: #94A3B8;
+      --text-faint: #64748B;
+      --border: #334155;
+      --border-light: #1E293B;
+      --accent: #F59E0B;
+      --accent-hover: #FBBF24;
+      --code-bg: #334155;
+      --code-text: #FDE68A;
+      --input-bg: #0F172A;
+      --input-border: #475569;
+      --warn-bg: #1C1917;
+      --warn-border: #78350F;
+      --warn-text: #FDE68A;
+      --error-bg: #1F1315;
+      --error-border: #7F1D1D;
+      --error-text: #FCA5A5;
+      --success-bg: #022C22;
+      --success-border: #065F46;
+      --success-text: #6EE7B7;
+      --info-bg: #0C1A2E;
+      --info-border: #1E3A5F;
+      --info-text: #93C5FD;
+      --shadow: 0 1px 3px rgba(0,0,0,0.5);
+      --pre-bg: #0F172A;
+      --pre-text: #E2E8F0;
+      --mode-active-bg: #334155;
+    }
+
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #F9FAFB; color: #1F2937; line-height: 1.5; padding: 32px 16px; }
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: var(--bg-body); color: var(--text-primary); line-height: 1.5; padding: 32px 16px; transition: background 0.2s, color 0.2s; }
     .app { max-width: 920px; margin: 0 auto; }
     h1 { font-size: 28px; font-weight: 800; text-align: center; }
-    .subtitle { color: #6B7280; font-size: 14px; text-align: center; margin-top: 6px; margin-bottom: 28px; }
-    code { background: #FEF3C7; padding: 1px 5px; border-radius: 3px; font-size: 12px; }
+    .subtitle { color: var(--text-muted); font-size: 14px; text-align: center; margin-top: 6px; margin-bottom: 12px; }
+    code { background: var(--code-bg); color: var(--code-text); padding: 1px 5px; border-radius: 3px; font-size: 12px; }
+
+    /* ── Header row ── */
+    .header-row { display: flex; justify-content: center; align-items: center; position: relative; margin-bottom: 0; }
+    .theme-toggle { position: absolute; right: 0; top: 50%; transform: translateY(-50%); background: var(--bg-secondary); border: 1px solid var(--border); border-radius: 8px; padding: 6px 10px; cursor: pointer; font-size: 18px; line-height: 1; transition: background 0.15s; }
+    .theme-toggle:hover { background: var(--border); }
+
+    /* ── API status badge ── */
+    .api-status { display: flex; align-items: center; justify-content: center; gap: 6px; margin-bottom: 20px; font-size: 12px; font-weight: 600; }
+    .api-status-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+    .api-status-text { opacity: 0.85; }
 
     /* ── Tabs ── */
-    .tab-bar { display: flex; border-bottom: 2px solid #E5E7EB; margin-bottom: 24px; }
-    .tab-btn { padding: 10px 24px; border: none; border-bottom: 2px solid transparent; margin-bottom: -2px; font-size: 14px; font-weight: 600; cursor: pointer; background: none; color: #6B7280; transition: all 0.15s; }
-    .tab-btn.active { color: #D97706; border-bottom-color: #D97706; }
+    .tab-bar { display: flex; border-bottom: 2px solid var(--border); margin-bottom: 24px; }
+    .tab-btn { padding: 10px 24px; border: none; border-bottom: 2px solid transparent; margin-bottom: -2px; font-size: 14px; font-weight: 600; cursor: pointer; background: none; color: var(--text-muted); transition: all 0.15s; }
+    .tab-btn.active { color: var(--accent); border-bottom-color: var(--accent); }
 
     /* ── Mode toggle ── */
-    .mode-bar { display: flex; background: #F3F4F6; border-radius: 8px; padding: 3px; margin-bottom: 20px; width: fit-content; }
-    .mode-btn { padding: 8px 20px; border: none; border-radius: 6px; font-size: 13px; font-weight: 600; cursor: pointer; background: transparent; color: #6B7280; transition: all 0.15s; }
-    .mode-btn.active { background: white; color: #1F2937; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+    .mode-bar { display: flex; background: var(--bg-secondary); border-radius: 8px; padding: 3px; margin-bottom: 20px; width: fit-content; }
+    .mode-btn { padding: 8px 20px; border: none; border-radius: 6px; font-size: 13px; font-weight: 600; cursor: pointer; background: transparent; color: var(--text-muted); transition: all 0.15s; }
+    .mode-btn.active { background: var(--mode-active-bg); color: var(--text-primary); box-shadow: var(--shadow); }
 
     /* ── Inputs ── */
     textarea, input[type="text"], input[type="password"], input[type="number"] {
-      width: 100%; padding: 12px 14px; border: 1px solid #D1D5DB; border-radius: 8px;
+      width: 100%; padding: 12px 14px; border: 1px solid var(--input-border); border-radius: 8px;
       font-size: 14px; font-family: monospace; resize: vertical; line-height: 1.6;
+      background: var(--input-bg); color: var(--text-primary);
     }
     textarea.main { min-height: 180px; border-radius: 10px; }
     textarea.system { min-height: 80px; margin-bottom: 12px; }
 
     /* ── Buttons ── */
-    .btn-primary { padding: 10px 28px; background: #D97706; color: white; border: none; border-radius: 8px; font-size: 14px; font-weight: 700; cursor: pointer; transition: background 0.15s; }
-    .btn-primary:disabled { background: #9CA3AF; cursor: default; }
-    .btn-link { background: none; border: none; font-size: 13px; color: #6B7280; cursor: pointer; text-decoration: underline; padding: 0; }
-    .btn-show { background: none; border: none; font-size: 11px; color: #6B7280; cursor: pointer; text-decoration: underline; }
+    .btn-primary { padding: 10px 28px; background: var(--accent); color: white; border: none; border-radius: 8px; font-size: 14px; font-weight: 700; cursor: pointer; transition: background 0.15s; }
+    .btn-primary:disabled { background: var(--text-faint); cursor: default; }
+    .btn-link { background: none; border: none; font-size: 13px; color: var(--text-muted); cursor: pointer; text-decoration: underline; padding: 0; }
+    .btn-show { background: none; border: none; font-size: 11px; color: var(--text-muted); cursor: pointer; text-decoration: underline; }
 
     /* ── Cards ── */
-    .card { background: white; border: 1px solid #E5E7EB; border-radius: 10px; padding: 16px 20px; margin-bottom: 16px; }
+    .card { background: var(--bg-card); border: 1px solid var(--border); border-radius: 10px; padding: 16px 20px; margin-bottom: 16px; }
     .cost-card { border-radius: 12px; padding: 20px; flex: 1; min-width: 220px; }
-    .cost-row { display: flex; justify-content: space-between; font-size: 13px; color: #4B5563; margin-bottom: 2px; }
+    .cost-row { display: flex; justify-content: space-between; font-size: 13px; color: var(--text-secondary); margin-bottom: 2px; }
     .cost-total { display: flex; justify-content: space-between; font-size: 15px; font-weight: 700; padding-top: 6px; margin-top: 4px; }
-    .cost-label { font-size: 11px; color: #9CA3AF; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 4px; }
-    .cost-rate { font-size: 11px; color: #9CA3AF; margin-top: 12px; }
+    .cost-label { font-size: 11px; color: var(--text-faint); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 4px; }
+    .cost-rate { font-size: 11px; color: var(--text-faint); margin-top: 12px; }
     .mono { font-family: monospace; }
 
     /* ── Flex helpers ── */
@@ -56,61 +136,74 @@
     .ml-auto { margin-left: auto; }
 
     /* ── Note boxes ── */
-    .note-warn { font-size: 12px; color: #92400E; background: #FFFBEB; border: 1px solid #FDE68A; border-radius: 6px; padding: 8px 12px; margin-bottom: 16px; line-height: 1.5; }
-    .note-info { font-size: 11px; color: #6B7280; background: #F9FAFB; border: 1px solid #E5E7EB; border-radius: 6px; padding: 8px 12px; margin-bottom: 16px; line-height: 1.5; }
-    .note-error { background: #FEF2F2; border: 1px solid #FECACA; border-radius: 8px; padding: 10px 14px; color: #B91C1C; font-size: 13px; margin-bottom: 16px; }
+    .note-warn { font-size: 12px; color: var(--warn-text); background: var(--warn-bg); border: 1px solid var(--warn-border); border-radius: 6px; padding: 8px 12px; margin-bottom: 16px; line-height: 1.5; }
+    .note-info { font-size: 11px; color: var(--text-muted); background: var(--bg-tertiary); border: 1px solid var(--border); border-radius: 6px; padding: 8px 12px; margin-bottom: 16px; line-height: 1.5; }
+    .note-error { background: var(--error-bg); border: 1px solid var(--error-border); border-radius: 8px; padding: 10px 14px; color: var(--error-text); font-size: 13px; margin-bottom: 16px; }
 
     /* ── Optimizer ── */
-    .optimizer-panel { background: #FAFAFA; border: 1px solid #E5E7EB; border-radius: 12px; padding: 24px; margin-top: 24px; }
-    .suggestion-card { background: white; border: 1px solid #E5E7EB; border-radius: 10px; margin-bottom: 10px; overflow: hidden; }
-    .suggestion-header { width: 100%; display: flex; align-items: center; gap: 10px; padding: 12px 16px; background: none; border: none; cursor: pointer; text-align: left; font-size: 14px; }
-    .suggestion-body { padding: 0 16px 14px 16px; font-size: 13px; color: #4B5563; line-height: 1.65; }
+    .optimizer-panel { background: var(--bg-tertiary); border: 1px solid var(--border); border-radius: 12px; padding: 24px; margin-top: 24px; }
+    .suggestion-card { background: var(--bg-card); border: 1px solid var(--border); border-radius: 10px; margin-bottom: 10px; overflow: hidden; }
+    .suggestion-header { width: 100%; display: flex; align-items: center; gap: 10px; padding: 12px 16px; background: none; border: none; cursor: pointer; text-align: left; font-size: 14px; color: var(--text-primary); }
+    .suggestion-body { padding: 0 16px 14px 16px; font-size: 13px; color: var(--text-secondary); line-height: 1.65; }
     .badge { font-size: 10px; font-weight: 700; padding: 2px 8px; border-radius: 4px; text-transform: uppercase; letter-spacing: 0.5px; white-space: nowrap; }
-    .badge-savings { background: #ECFDF5; color: #059669; font-size: 12px; font-weight: 700; }
-    .fix-label { font-size: 11px; color: #6B7280; background: #F3F4F6; padding: 3px 10px; border-radius: 4px; font-weight: 600; }
+    .badge-savings { background: var(--success-bg); color: var(--success-text); font-size: 12px; font-weight: 700; }
+    .fix-label { font-size: 11px; color: var(--text-muted); background: var(--bg-secondary); padding: 3px 10px; border-radius: 4px; font-weight: 600; }
 
     /* ── Score ring ── */
     .score-ring { position: relative; width: 64px; height: 64px; }
     .score-value { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 18px; font-family: monospace; }
 
     /* ── Scale estimator ── */
-    .scale-panel { background: #F9FAFB; border: 1px solid #E5E7EB; border-radius: 12px; padding: 20px; margin-top: 20px; }
-    .scale-card { flex: 1; min-width: 150px; padding: 12px; background: white; border-radius: 8px; border: 1px solid #E5E7EB; }
+    .scale-panel { background: var(--bg-tertiary); border: 1px solid var(--border); border-radius: 12px; padding: 20px; margin-top: 20px; }
+    .scale-card { flex: 1; min-width: 150px; padding: 12px; background: var(--bg-card); border-radius: 8px; border: 1px solid var(--border); }
 
     /* ── Limitations ── */
-    .limits-panel { margin-top: 28px; border: 1px solid #E5E7EB; border-radius: 10px; overflow: hidden; }
-    .limits-toggle { width: 100%; display: flex; align-items: center; justify-content: space-between; padding: 14px 20px; background: #F9FAFB; border: none; cursor: pointer; font-size: 14px; font-weight: 700; color: #374151; }
-    .limits-body { padding: 0 20px 20px; }
+    .limits-panel { margin-top: 28px; border: 1px solid var(--border); border-radius: 10px; overflow: hidden; }
+    .limits-toggle { width: 100%; display: flex; align-items: center; justify-content: space-between; padding: 14px 20px; background: var(--bg-tertiary); border: none; cursor: pointer; font-size: 14px; font-weight: 700; color: var(--text-primary); }
+    .limits-body { padding: 0 20px 20px; background: var(--bg-card); }
     .limits-item { margin-bottom: 14px; padding-bottom: 14px; }
-    .limits-item:not(:last-child) { border-bottom: 1px solid #F3F4F6; }
-    .limits-title { font-weight: 700; font-size: 13px; color: #1F2937; margin-bottom: 4px; }
-    .limits-detail { font-size: 12px; color: #4B5563; line-height: 1.6; }
-    .limits-links { margin-top: 8px; padding: 10px 14px; background: #EFF6FF; border-radius: 6px; font-size: 12px; color: #1E40AF; line-height: 1.5; }
-    .limits-links a { color: #1E40AF; }
+    .limits-item:not(:last-child) { border-bottom: 1px solid var(--border-light); }
+    .limits-title { font-weight: 700; font-size: 13px; color: var(--text-primary); margin-bottom: 4px; }
+    .limits-detail { font-size: 12px; color: var(--text-secondary); line-height: 1.6; }
+    .limits-links { margin-top: 8px; padding: 10px 14px; background: var(--info-bg); border-radius: 6px; font-size: 12px; color: var(--info-text); line-height: 1.5; }
+    .limits-links a { color: var(--info-text); }
 
     /* ── Setup guide ── */
-    .setup-guide { background: #FFFBEB; border: 1px solid #FDE68A; border-radius: 10px; padding: 20px; margin-top: 24px; font-size: 13px; color: #92400E; line-height: 1.7; }
-    .setup-guide pre { background: #1F2937; color: #F9FAFB; padding: 14px; border-radius: 8px; overflow: auto; font-size: 12px; line-height: 1.5; margin: 8px 0; }
+    .setup-guide { background: var(--warn-bg); border: 1px solid var(--warn-border); border-radius: 10px; padding: 20px; margin-top: 24px; font-size: 13px; color: var(--warn-text); line-height: 1.7; }
+    .setup-guide pre { background: var(--pre-bg); color: var(--pre-text); padding: 14px; border-radius: 8px; overflow: auto; font-size: 12px; line-height: 1.5; margin: 8px 0; }
 
     /* ── Quick reference ── */
-    .qref { display: grid; grid-template-columns: 1fr 1fr; gap: 8px 24px; font-size: 12px; color: #4B5563; line-height: 1.6; }
-    .qref strong { color: #059669; }
+    .qref { display: grid; grid-template-columns: 1fr 1fr; gap: 8px 24px; font-size: 12px; color: var(--text-secondary); line-height: 1.6; }
+    .qref strong { color: var(--success-text); }
 
     /* ── Optimizer caveats ── */
-    .opt-caveats { margin-top: 20px; padding: 16px; background: #FFFBEB; border: 1px solid #FDE68A; border-radius: 8px; font-size: 12px; color: #92400E; line-height: 1.65; }
+    .opt-caveats { margin-top: 20px; padding: 16px; background: var(--warn-bg); border: 1px solid var(--warn-border); border-radius: 8px; font-size: 12px; color: var(--warn-text); line-height: 1.65; }
     .opt-caveats strong { font-weight: 700; }
     .opt-caveats > div:not(:last-child) { margin-bottom: 6px; }
 
-    .chevron { color: #9CA3AF; font-size: 16px; transition: transform 0.15s; display: inline-block; }
+    .chevron { color: var(--text-faint); font-size: 16px; transition: transform 0.15s; display: inline-block; }
     .chevron.open { transform: rotate(180deg); }
 
     .hidden { display: none; }
+
+    /* ── Live count indicator ── */
+    .live-token-count { font-size: 12px; color: var(--text-faint); font-family: monospace; transition: color 0.15s; }
+    .live-token-count.updated { color: var(--accent); }
   </style>
 </head>
 <body>
 <div class="app" id="app">
-  <h1>Claude Token Counter & Optimizer</h1>
+  <div class="header-row">
+    <h1>Claude Token Counter & Optimizer</h1>
+    <button class="theme-toggle" id="theme-toggle" title="Toggle dark mode" aria-label="Toggle dark mode">&#9790;</button>
+  </div>
   <p class="subtitle">Count tokens, compare costs, and get suggestions to reduce token usage</p>
+
+  <!-- API key status badge -->
+  <div class="api-status" id="api-status">
+    <span class="api-status-dot" id="api-status-dot" style="background:#9CA3AF;"></span>
+    <span class="api-status-text" id="api-status-text" style="color:var(--text-faint);">Checking API key...</span>
+  </div>
 
   <!-- Tab bar -->
   <div class="tab-bar">
@@ -132,18 +225,18 @@
   <!-- API key (hidden by default) -->
   <div id="api-key-section" class="hidden" style="margin-bottom: 16px;">
     <!-- Server-key banner (shown when server has ANTHROPIC_API_KEY) -->
-    <div id="server-key-banner" class="hidden" style="font-size: 13px; color: #059669; background: #ECFDF5; border: 1px solid #A7F3D0; border-radius: 6px; padding: 10px 14px; line-height: 1.5;">
+    <div id="server-key-banner" class="hidden" style="font-size: 13px; color: var(--success-text); background: var(--success-bg); border: 1px solid var(--success-border); border-radius: 6px; padding: 10px 14px; line-height: 1.5;">
       <strong>API key loaded from server.</strong> No need to enter one here — the server has <code>ANTHROPIC_API_KEY</code> configured.
     </div>
     <!-- Manual key input (shown when server does NOT have a key) -->
     <div id="manual-key-section">
       <div class="flex items-center gap-8" style="margin-bottom: 6px;">
-        <label style="font-size: 13px; font-weight: 600; color: #374151;">API Key</label>
+        <label style="font-size: 13px; font-weight: 600; color: var(--text-primary);">API Key</label>
         <button class="btn-show" id="toggle-key-vis">show</button>
-        <button class="btn-show" id="clear-saved-key" class="hidden" style="color: #DC2626;">forget saved key</button>
+        <button class="btn-show" id="clear-saved-key" class="hidden" style="color: var(--error-text);">forget saved key</button>
       </div>
       <input type="password" id="api-key" placeholder="sk-ant-..." />
-      <div style="font-size: 11px; color: #9CA3AF; margin-top: 4px;">
+      <div style="font-size: 11px; color: var(--text-faint); margin-top: 4px;">
         Your key is saved in this browser so you don't have to paste it again. It's only sent to the local server, never to any third party.
       </div>
     </div>
@@ -158,7 +251,10 @@
 
   <!-- Count row -->
   <div class="flex justify-between items-center" style="margin-top: 8px; margin-bottom: 16px;">
-    <span style="font-size: 12px; color: #9CA3AF;" id="char-count">0 characters</span>
+    <div class="flex items-center gap-16">
+      <span style="font-size: 12px; color: var(--text-faint);" id="char-count">0 characters</span>
+      <span class="live-token-count" id="live-token-count"></span>
+    </div>
     <button class="btn-primary" id="count-btn" disabled>Estimate Tokens</button>
   </div>
 
@@ -171,7 +267,7 @@
     <div class="card flex gap-32 items-center flex-wrap">
       <div>
         <div class="cost-label" id="input-label">INPUT TOKENS (EST.)</div>
-        <div style="font-size: 26px; font-weight: 800; color: #D97706; font-family: monospace;" id="input-tokens">0</div>
+        <div style="font-size: 26px; font-weight: 800; color: var(--accent); font-family: monospace;" id="input-tokens">0</div>
       </div>
       <div>
         <div class="cost-label">EXPECTED OUTPUT (MANUAL ESTIMATE)</div>
@@ -179,10 +275,10 @@
           <input type="range" min="1" max="8192" value="256" id="output-slider" style="width: 120px;" />
           <span style="font-size: 18px; font-weight: 700; font-family: monospace;" id="output-tokens">256</span>
         </div>
-        <div style="font-size: 10px; color: #9CA3AF; margin-top: 2px;">Actual output varies by task. Output tokens cost 3-5x more than input.</div>
+        <div style="font-size: 10px; color: var(--text-faint); margin-top: 2px;">Actual output varies by task. Output tokens cost 3-5x more than input.</div>
       </div>
       <div class="ml-auto flex items-center gap-8">
-        <label style="font-size: 12px; color: #6B7280;">Show Batch pricing</label>
+        <label style="font-size: 12px; color: var(--text-muted);">Show Batch pricing</label>
         <input type="checkbox" id="show-batch" />
       </div>
     </div>
@@ -199,7 +295,7 @@
     <div class="scale-panel">
       <div style="font-weight: 700; font-size: 15px; margin-bottom: 12px;">Scale Estimator</div>
       <div class="flex items-center gap-8" style="margin-bottom: 16px;">
-        <label style="font-size: 13px; color: #4B5563;">Requests per day:</label>
+        <label style="font-size: 13px; color: var(--text-secondary);">Requests per day:</label>
         <input type="number" value="100" min="1" id="requests-per-day" style="width: 100px; padding: 6px 10px; font-family: monospace;" />
       </div>
       <div class="flex gap-16 flex-wrap" id="scale-cards"></div>
@@ -228,7 +324,7 @@ node server.js</pre>
       <span class="chevron">&#x25BE;</span>
     </button>
     <div class="limits-body hidden" id="limits-body">
-      <p style="font-size: 13px; color: #6B7280; margin: 12px 0 16px; line-height: 1.5;">
+      <p style="font-size: 13px; color: var(--text-muted); margin: 12px 0 16px; line-height: 1.5;">
         This tool provides estimates to help your team plan and optimize Claude API usage. Keep these limitations in mind when making budget decisions.
       </p>
       <div class="limits-item">
@@ -268,9 +364,9 @@ node server.js</pre>
 <script>
 // ─── Model Data ────────────────────────────────────────────────────────
 const MODELS = [
-  { id: "claude-opus-4-6", name: "Opus 4.6", tier: "Most Capable", inputPer1M: 5.0, outputPer1M: 25.0, batchInputPer1M: 2.5, batchOutputPer1M: 12.5, color: "#7C3AED", bgLight: "#F5F3FF", borderLight: "#DDD6FE" },
-  { id: "claude-sonnet-4-6", name: "Sonnet 4.6", tier: "Balanced", inputPer1M: 3.0, outputPer1M: 15.0, batchInputPer1M: 1.5, batchOutputPer1M: 7.5, color: "#2563EB", bgLight: "#EFF6FF", borderLight: "#BFDBFE" },
-  { id: "claude-haiku-4-5-20251001", name: "Haiku 4.5", tier: "Fastest", inputPer1M: 1.0, outputPer1M: 5.0, batchInputPer1M: 0.5, batchOutputPer1M: 2.5, color: "#059669", bgLight: "#ECFDF5", borderLight: "#A7F3D0" },
+  { id: "claude-opus-4-6", name: "Opus 4.6", tier: "Most Capable", inputPer1M: 5.0, outputPer1M: 25.0, batchInputPer1M: 2.5, batchOutputPer1M: 12.5, color: "#7C3AED", bgLight: "#F5F3FF", borderLight: "#DDD6FE", darkBg: "#2E1065", darkBorder: "#5B21B6" },
+  { id: "claude-sonnet-4-6", name: "Sonnet 4.6", tier: "Balanced", inputPer1M: 3.0, outputPer1M: 15.0, batchInputPer1M: 1.5, batchOutputPer1M: 7.5, color: "#2563EB", bgLight: "#EFF6FF", borderLight: "#BFDBFE", darkBg: "#172554", darkBorder: "#1E40AF" },
+  { id: "claude-haiku-4-5-20251001", name: "Haiku 4.5", tier: "Fastest", inputPer1M: 1.0, outputPer1M: 5.0, batchInputPer1M: 0.5, batchOutputPer1M: 2.5, color: "#059669", bgLight: "#ECFDF5", borderLight: "#A7F3D0", darkBg: "#022C22", darkBorder: "#065F46" },
 ];
 
 // ─── Optimization Rules ────────────────────────────────────────────────
@@ -425,11 +521,20 @@ function analyzePrompt(prompt, system) {
   return { suggestions, score: Math.max(0, Math.min(100, 100 - Math.min(total, 80))), tokens };
 }
 
+function debounce(fn, delay) {
+  let timer;
+  return function(...args) { clearTimeout(timer); timer = setTimeout(() => fn.apply(this, args), delay); };
+}
+
+function isDark() {
+  return document.documentElement.getAttribute("data-theme") === "dark";
+}
+
 const CATEGORY_META = {
-  redundancy: { label: "Redundancy", color: "#DC2626", bg: "#FEF2F2" },
-  content: { label: "Content", color: "#D97706", bg: "#FFFBEB" },
-  structure: { label: "Structure", color: "#2563EB", bg: "#EFF6FF" },
-  strategy: { label: "Strategy", color: "#059669", bg: "#ECFDF5" },
+  redundancy: { label: "Redundancy", color: "#DC2626", bg: "#FEF2F2", darkBg: "#450A0A" },
+  content: { label: "Content", color: "#D97706", bg: "#FFFBEB", darkBg: "#422006" },
+  structure: { label: "Structure", color: "#2563EB", bg: "#EFF6FF", darkBg: "#172554" },
+  strategy: { label: "Strategy", color: "#059669", bg: "#ECFDF5", darkBg: "#022C22" },
 };
 const FIX_LABELS = { edit: "Edit prompt", auto: "Auto-fixable", caching: "Enable caching", strategy: "API strategy" };
 
@@ -437,7 +542,7 @@ const FIX_LABELS = { edit: "Edit prompt", auto: "Auto-fixable", caching: "Enable
 let state = {
   mode: "estimate", activeTab: "counter", inputTokens: null, outputTokens: 256,
   showBatch: false, showSystem: false, showApiKey: false, limitsOpen: false,
-  hasServerKey: false,
+  hasServerKey: false, hasSavedKey: false,
 };
 
 // ─── DOM refs ──────────────────────────────────────────────────────────
@@ -448,23 +553,26 @@ const promptEl = $("prompt"), sysEl = $("system-prompt"), apiKeyEl = $("api-key"
 function renderCostCards() {
   const inp = state.inputTokens, out = state.outputTokens;
   if (inp === null) return;
+  const dark = isDark();
   $("cost-cards").innerHTML = MODELS.map(m => {
     const ic = (inp / 1e6) * m.inputPer1M, oc = (out / 1e6) * m.outputPer1M, tc = ic + oc;
     const bic = (inp / 1e6) * m.batchInputPer1M, boc = (out / 1e6) * m.batchOutputPer1M, btc = bic + boc;
-    return `<div class="cost-card" style="background:${m.bgLight};border:1px solid ${m.borderLight}">
+    const bg = dark ? m.darkBg : m.bgLight;
+    const border = dark ? m.darkBorder : m.borderLight;
+    return `<div class="cost-card" style="background:${bg};border:1px solid ${border}">
       <div class="flex items-center gap-8" style="margin-bottom:4px"><div style="width:10px;height:10px;border-radius:50%;background:${m.color}"></div><span style="font-weight:700;font-size:16px">${m.name}</span></div>
-      <div style="font-size:12px;color:#6B7280;margin-bottom:16px">${m.tier}</div>
+      <div style="font-size:12px;color:var(--text-muted);margin-bottom:16px">${m.tier}</div>
       <div style="margin-bottom:12px">
         <div class="cost-label">Standard API</div>
         <div class="cost-row"><span>Input</span><span class="mono">${fmtCost(ic)}</span></div>
         <div class="cost-row"><span>Output</span><span class="mono">${fmtCost(oc)}</span></div>
-        <div class="cost-total" style="color:${m.color};border-top:1px solid ${m.borderLight}"><span>Total</span><span class="mono">${fmtCost(tc)}</span></div>
+        <div class="cost-total" style="color:${m.color};border-top:1px solid ${border}"><span>Total</span><span class="mono">${fmtCost(tc)}</span></div>
       </div>
       ${state.showBatch ? `<div>
         <div class="cost-label">Batch API (50% off)</div>
         <div class="cost-row"><span>Input</span><span class="mono">${fmtCost(bic)}</span></div>
         <div class="cost-row"><span>Output</span><span class="mono">${fmtCost(boc)}</span></div>
-        <div class="cost-total" style="color:${m.color};border-top:1px solid ${m.borderLight}"><span>Total</span><span class="mono">${fmtCost(btc)}</span></div>
+        <div class="cost-total" style="color:${m.color};border-top:1px solid ${border}"><span>Total</span><span class="mono">${fmtCost(btc)}</span></div>
       </div>` : ""}
       <div class="cost-rate">$${m.inputPer1M}/MTok in · $${m.outputPer1M}/MTok out</div>
     </div>`;
@@ -480,8 +588,8 @@ function renderScaleCards() {
     const daily = di * m.inputPer1M + do_ * m.outputPer1M;
     return `<div class="scale-card">
       <div style="font-weight:600;font-size:13px;color:${m.color};margin-bottom:8px">${m.name}</div>
-      <div style="font-size:12px;color:#6B7280">Daily: <span class="mono" style="font-weight:600;color:#1F2937">${fmtCost(daily)}</span></div>
-      <div style="font-size:12px;color:#6B7280">Monthly: <span class="mono" style="font-weight:600;color:#1F2937">${fmtCost(daily * 30)}</span></div>
+      <div style="font-size:12px;color:var(--text-muted)">Daily: <span class="mono" style="font-weight:600;color:var(--text-primary)">${fmtCost(daily)}</span></div>
+      <div style="font-size:12px;color:var(--text-muted)">Monthly: <span class="mono" style="font-weight:600;color:var(--text-primary)">${fmtCost(daily * 30)}</span></div>
     </div>`;
   }).join("");
 }
@@ -496,44 +604,45 @@ function renderOptimizer() {
   const totalSave = analysis.suggestions.reduce((s, x) => s + (x.savingsTokens || 0), 0);
   const totalCache = analysis.suggestions.reduce((s, x) => s + (x.cacheSavingsTokens || 0), 0);
   const tokensUsed = state.inputTokens || analysis.tokens;
-
   const scoreColor = analysis.score >= 80 ? "#059669" : analysis.score >= 50 ? "#D97706" : "#DC2626";
   const scoreLabel = analysis.score >= 90 ? "Well optimized" : analysis.score >= 70 ? "Good, some room to improve" : analysis.score >= 50 ? "Several optimizations available" : "Significant savings possible";
   const dashLen = (analysis.score / 100) * 175.9;
+  const dark = isDark();
 
   let html = `<div class="optimizer-panel">
     <div class="flex items-center justify-between" style="margin-bottom:16px">
       <h2 style="font-size:18px;font-weight:800">Token Optimizer</h2>
-      ${analysis.suggestions.length ? `<span style="font-size:13px;color:#6B7280">${analysis.suggestions.length} suggestion${analysis.suggestions.length !== 1 ? "s" : ""}</span>` : ""}
+      ${analysis.suggestions.length ? `<span style="font-size:13px;color:var(--text-muted)">${analysis.suggestions.length} suggestion${analysis.suggestions.length !== 1 ? "s" : ""}</span>` : ""}
     </div>
     <div class="flex items-center" style="gap:16px;margin-bottom:16px">
       <div class="score-ring">
         <svg width="64" height="64" viewBox="0 0 64 64">
-          <circle cx="32" cy="32" r="28" fill="none" stroke="#E5E7EB" stroke-width="6"/>
+          <circle cx="32" cy="32" r="28" fill="none" stroke="var(--border)" stroke-width="6"/>
           <circle cx="32" cy="32" r="28" fill="none" stroke="${scoreColor}" stroke-width="6" stroke-linecap="round" stroke-dasharray="${dashLen} 175.9" transform="rotate(-90 32 32)"/>
         </svg>
         <div class="score-value" style="color:${scoreColor}">${analysis.score}</div>
       </div>
-      <div><div style="font-weight:700;font-size:15px">Optimization Score</div><div style="font-size:13px;color:#6B7280">${scoreLabel}</div></div>
+      <div><div style="font-weight:700;font-size:15px">Optimization Score</div><div style="font-size:13px;color:var(--text-muted)">${scoreLabel}</div></div>
     </div>`;
 
   if (totalSave > 0 || totalCache > 0) {
     html += `<div class="flex gap-16 flex-wrap" style="margin-bottom:20px">`;
-    if (totalSave > 0) html += `<div style="background:#ECFDF5;border:1px solid #A7F3D0;border-radius:8px;padding:10px 16px;flex:1;min-width:180px"><div style="font-size:11px;color:#059669;text-transform:uppercase;letter-spacing:0.5px">Potential Token Savings</div><div style="font-size:22px;font-weight:800;color:#059669;font-family:monospace">${fmtTok(totalSave)}</div><div style="font-size:12px;color:#6B7280">${Math.round((totalSave / Math.max(tokensUsed, 1)) * 100)}% of current input</div></div>`;
-    if (totalCache > 0) html += `<div style="background:#EFF6FF;border:1px solid #BFDBFE;border-radius:8px;padding:10px 16px;flex:1;min-width:180px"><div style="font-size:11px;color:#2563EB;text-transform:uppercase;letter-spacing:0.5px">Cacheable Tokens</div><div style="font-size:22px;font-weight:800;color:#2563EB;font-family:monospace">${fmtTok(totalCache)}</div><div style="font-size:12px;color:#6B7280">90% cheaper on repeat calls</div></div>`;
+    if (totalSave > 0) html += `<div style="background:var(--success-bg);border:1px solid var(--success-border);border-radius:8px;padding:10px 16px;flex:1;min-width:180px"><div style="font-size:11px;color:var(--success-text);text-transform:uppercase;letter-spacing:0.5px">Potential Token Savings</div><div style="font-size:22px;font-weight:800;color:var(--success-text);font-family:monospace">${fmtTok(totalSave)}</div><div style="font-size:12px;color:var(--text-muted)">${Math.round((totalSave / Math.max(tokensUsed, 1)) * 100)}% of current input</div></div>`;
+    if (totalCache > 0) html += `<div style="background:var(--info-bg);border:1px solid var(--info-border);border-radius:8px;padding:10px 16px;flex:1;min-width:180px"><div style="font-size:11px;color:var(--info-text);text-transform:uppercase;letter-spacing:0.5px">Cacheable Tokens</div><div style="font-size:22px;font-weight:800;color:var(--info-text);font-family:monospace">${fmtTok(totalCache)}</div><div style="font-size:12px;color:var(--text-muted)">90% cheaper on repeat calls</div></div>`;
     html += `</div>`;
   }
 
   if (!analysis.suggestions.length) {
-    html += `<div style="text-align:center;padding:24px;color:#059669;font-size:14px">Your prompt looks well-optimized! No major savings found.</div>`;
+    html += `<div style="text-align:center;padding:24px;color:var(--success-text);font-size:14px">Your prompt looks well-optimized! No major savings found.</div>`;
   } else {
     for (let i = 0; i < analysis.suggestions.length; i++) {
       const s = analysis.suggestions[i], cat = CATEGORY_META[s.category] || CATEGORY_META.strategy;
       const open = i < 3;
+      const catBg = dark ? cat.darkBg : cat.bg;
       html += `<div class="suggestion-card" style="border-left:4px solid ${cat.color}">
         <button class="suggestion-header" onclick="this.nextElementSibling.classList.toggle('hidden');this.querySelector('.chevron').classList.toggle('open')">
-          <span class="badge" style="background:${cat.bg};color:${cat.color}">${cat.label}</span>
-          <span style="flex:1;font-weight:600;color:#1F2937">${s.title}</span>
+          <span class="badge" style="background:${catBg};color:${cat.color}">${cat.label}</span>
+          <span style="flex:1;font-weight:600">${s.title}</span>
           ${(s.savingsPercent > 0 || s.cacheSavingsTokens > 0) ? `<span class="badge badge-savings">${s.savingsPercent > 0 ? `~${s.savingsPercent}% savings` : s.cacheSavingsTokens ? `~${fmtTok(s.cacheSavingsTokens)} cacheable` : ""}</span>` : ""}
           <span class="chevron${open ? " open" : ""}">&#x25BE;</span>
         </button>
@@ -541,7 +650,7 @@ function renderOptimizer() {
           <p style="margin:0">${s.detail}</p>
           <div class="flex gap-8 flex-wrap" style="margin-top:10px">
             ${s.fix ? `<span class="fix-label">${FIX_LABELS[s.fix] || s.fix}</span>` : ""}
-            ${s.savingsTokens > 0 ? `<span style="font-size:11px;color:#059669;font-weight:600">Save ~${fmtTok(s.savingsTokens)} tokens/request</span>` : ""}
+            ${s.savingsTokens > 0 ? `<span style="font-size:11px;color:var(--success-text);font-weight:600">Save ~${fmtTok(s.savingsTokens)} tokens/request</span>` : ""}
           </div>
         </div>
       </div>`;
@@ -549,7 +658,7 @@ function renderOptimizer() {
   }
 
   // Quick reference
-  html += `<div style="margin-top:20px;padding:16px;background:white;border:1px solid #E5E7EB;border-radius:8px">
+  html += `<div style="margin-top:20px;padding:16px;background:var(--bg-card);border:1px solid var(--border);border-radius:8px">
     <div style="font-weight:700;font-size:13px;margin-bottom:10px">Quick Reference: Top Token-Saving Strategies</div>
     <div class="qref">
       <div><strong>Prompt Caching</strong> — 90% off repeat content</div>
@@ -590,7 +699,11 @@ async function countTokens() {
   if (!state.hasServerKey && !apiKey) { showError("Please enter your Anthropic API key."); return; }
 
   // Save key to localStorage for next time (only if user provided one)
-  if (apiKey) { try { localStorage.setItem("claude_tc_api_key", apiKey); } catch(e) {} }
+  if (apiKey) {
+    try { localStorage.setItem("claude_tc_api_key", apiKey); } catch(e) {}
+    state.hasSavedKey = true;
+    updateApiStatus();
+  }
 
   $("count-btn").disabled = true;
   $("count-btn").textContent = "Counting...";
@@ -634,6 +747,74 @@ function renderResults() {
 function showError(msg) { const el = $("error-msg"); el.textContent = msg; el.classList.remove("hidden"); }
 function hideError() { $("error-msg").classList.add("hidden"); }
 
+// ─── Live Token Counting ──────────────────────────────────────────────
+const liveCountEl = $("live-token-count");
+const debouncedLiveCount = debounce(() => {
+  const prompt = promptEl.value, system = sysEl.value;
+  if (!prompt.trim() && !system.trim()) {
+    liveCountEl.textContent = "";
+    return;
+  }
+  const est = estimateTokens(prompt + system);
+  liveCountEl.textContent = "~" + fmtTok(est) + " tokens (est.)";
+  liveCountEl.classList.add("updated");
+  setTimeout(() => liveCountEl.classList.remove("updated"), 400);
+
+  // Auto-update results in estimate mode if already shown
+  if (state.mode === "estimate" && state.inputTokens !== null) {
+    state.inputTokens = est;
+    renderResults();
+  }
+}, 300);
+
+// ─── Dark Mode ─────────────────────────────────────────────────────────
+function setTheme(theme) {
+  document.documentElement.setAttribute("data-theme", theme);
+  $("theme-toggle").textContent = theme === "dark" ? "\u2600" : "\u263E";
+  $("theme-toggle").title = theme === "dark" ? "Switch to light mode" : "Switch to dark mode";
+  try { localStorage.setItem("claude_tc_theme", theme); } catch(e) {}
+  // Re-render dynamic content with updated theme
+  if (state.inputTokens !== null) { renderCostCards(); renderScaleCards(); }
+  if (state.activeTab === "optimizer") renderOptimizer();
+}
+
+function initTheme() {
+  let theme = null;
+  try { theme = localStorage.getItem("claude_tc_theme"); } catch(e) {}
+  if (!theme) {
+    theme = window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+  }
+  setTheme(theme);
+  // Listen for system preference changes
+  if (window.matchMedia) {
+    window.matchMedia("(prefers-color-scheme: dark)").addEventListener("change", e => {
+      // Only auto-switch if user hasn't set a manual preference
+      let saved = null;
+      try { saved = localStorage.getItem("claude_tc_theme"); } catch(err) {}
+      if (!saved) setTheme(e.matches ? "dark" : "light");
+    });
+  }
+}
+
+// ─── API Key Status ────────────────────────────────────────────────────
+function updateApiStatus() {
+  const dot = $("api-status-dot");
+  const text = $("api-status-text");
+  if (state.hasServerKey) {
+    dot.style.background = "#059669";
+    text.style.color = "var(--success-text)";
+    text.textContent = "API Key: Loaded from server environment";
+  } else if (state.hasSavedKey || apiKeyEl.value.trim()) {
+    dot.style.background = "#2563EB";
+    text.style.color = "var(--info-text)";
+    text.textContent = "API Key: Saved in browser";
+  } else {
+    dot.style.background = "#9CA3AF";
+    text.style.color = "var(--text-faint)";
+    text.textContent = "API Key: Not configured";
+  }
+}
+
 // ─── Event Wiring ──────────────────────────────────────────────────────
 // Tabs
 document.querySelectorAll(".tab-btn").forEach(btn => {
@@ -675,14 +856,21 @@ $("toggle-key-vis").addEventListener("click", () => {
   $("toggle-key-vis").textContent = state.showApiKey ? "hide" : "show";
 });
 
-// Character count & button enable
+// Character count, button enable, and live token counting
 function updateCharCount() {
   const c = promptEl.value.length + sysEl.value.length;
   $("char-count").textContent = c.toLocaleString() + " characters";
   $("count-btn").disabled = !promptEl.value.trim();
+  debouncedLiveCount();
 }
 promptEl.addEventListener("input", updateCharCount);
 sysEl.addEventListener("input", updateCharCount);
+
+// API key change triggers status update
+apiKeyEl.addEventListener("input", debounce(() => {
+  state.hasSavedKey = !!apiKeyEl.value.trim();
+  updateApiStatus();
+}, 300));
 
 // Count button
 $("count-btn").addEventListener("click", countTokens);
@@ -715,15 +903,27 @@ $("limits-toggle").addEventListener("click", () => {
 $("clear-saved-key").addEventListener("click", () => {
   try { localStorage.removeItem("claude_tc_api_key"); } catch(e) {}
   apiKeyEl.value = "";
+  state.hasSavedKey = false;
   $("clear-saved-key").style.display = "none";
+  updateApiStatus();
+});
+
+// Dark mode toggle
+$("theme-toggle").addEventListener("click", () => {
+  const current = document.documentElement.getAttribute("data-theme");
+  setTheme(current === "dark" ? "light" : "dark");
 });
 
 // ─── Initialization ────────────────────────────────────────────────────
+// Initialize dark mode
+initTheme();
+
 // Restore API key from localStorage
 try {
   const savedKey = localStorage.getItem("claude_tc_api_key");
   if (savedKey) {
     apiKeyEl.value = savedKey;
+    state.hasSavedKey = true;
     $("clear-saved-key").style.display = "inline";
   }
 } catch(e) {}
@@ -735,8 +935,10 @@ fetch("/api/config").then(r => r.json()).then(data => {
     $("server-key-banner").classList.remove("hidden");
     $("manual-key-section").classList.add("hidden");
   }
+  updateApiStatus();
 }).catch(() => {
   // Server not reachable (file:// mode) — that's fine, manual key input stays
+  updateApiStatus();
 });
 </script>
 </body>
